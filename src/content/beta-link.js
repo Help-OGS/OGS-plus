@@ -1,6 +1,6 @@
 /**
- * OGS Plus - 상단 네비게이션 바에 'Beta' 바로가기 링크 추가
- * 클릭하면 beta.online-go.com 의 동일 경로로 이동한다.
+ * OGS Plus - Added a 'Beta' shortcut link to the top navigation bar
+ * Click to go to the same path on beta.online-go.com .
  */
 (function (global) {
   "use strict";
