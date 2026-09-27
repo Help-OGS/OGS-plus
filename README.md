@@ -3,11 +3,12 @@
 This is a Chrome extension that makes using OGS (Online-Go.com) more convenient. It is not listed on the Chrome Web Store; instead, it is installed manually via the **"Load unpacked"** option in `chrome://extensions` (Developer mode).
 
 ## Installation Instructions
-
-1. Go to `chrome://extensions`
-2. Turn on "Developer mode" in the top right corner
-3. Click "Load unpacked"
-4. Select the `src/` folder from this repository
+1. click Code
+2.Download zip
+3. Go to `chrome://extensions`
+4. Turn on "Developer mode" in the top right corner
+5. Click "Load unpacked"
+6. Select the `src/` folder from this repository
 
 ## How to Use
 
