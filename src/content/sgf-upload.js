@@ -1,14 +1,9 @@
 /**
- * OGS Plus - SGF 라이브러리 페이지에 'OGS Game' 업로드 버튼 추가
+ * OGS Plus - SGF Library uploader
  *
- * 경로: /library/:player_id/:collection_id
- *
- * 기능:
- *   1. OGS 대국 검색
- *   2. 선택한 대국의 SGF 원문 다운로드
- *   3. SGF 파일 생성
- *   4. OGS SGF Library에 업로드
+ * OGS 대국을 SGF로 받아 현재 Library collection에 업로드
  */
+
 (function (global) {
   "use strict";
 
@@ -19,10 +14,12 @@
 
   function getRouteParams() {
     const m = window.location.pathname.match(
-      /\/library\/(\d+)\/(\d+)/,
+      /\/library\/(\d+)\/(\d+)/
     );
 
-    if (!m) return null;
+    if (!m) {
+      return null;
+    }
 
     return {
       playerId: Number(m[1]),
@@ -30,87 +27,349 @@
     };
   }
 
-  async function searchGames(query, mode) {
+  function getCookie(name) {
+    const cookies = document.cookie.split(";");
+
+    for (const cookie of cookies) {
+      const [key, ...value] = cookie.trim().split("=");
+
+      if (key === name) {
+        return decodeURIComponent(value.join("="));
+      }
+    }
+
+    return "";
+  }
+
+  /**
+   * OGS API에 직접 요청한다.
+   *
+   * Utils.apiFetch를 사용하지 않는 이유:
+   * SGF upload는 multipart/form-data이고
+   * CSRF/session 처리를 확실하게 하기 위해
+   * 여기서 직접 관리한다.
+   */
+  async function ogsFetch(path, options = {}) {
+    const url = path.startsWith("http")
+      ? path
+      : `${window.location.origin}/api/v1/${path}`;
+
+    const method = (
+      options.method || "GET"
+    ).toUpperCase();
+
+    const headers = {
+      Accept: "application/json, text/plain, */*",
+      ...(options.headers || {}),
+    };
+
+    if (
+      !["GET", "HEAD", "OPTIONS", "TRACE"].includes(
+        method
+      )
+    ) {
+      const csrfToken = getCookie("csrftoken");
+
+      if (csrfToken) {
+        headers["X-CSRFToken"] = csrfToken;
+      }
+
+      headers["X-Requested-With"] = "XMLHttpRequest";
+    }
+
+    /*
+     * 중요:
+     * FormData일 때 Content-Type을 직접 넣지 않는다.
+     *
+     * 브라우저가
+     *
+     * multipart/form-data; boundary=----...
+     *
+     * 를 자동으로 넣어야 한다.
+     */
+    if (options.body instanceof FormData) {
+      delete headers["Content-Type"];
+    }
+
+    console.log(
+      "[OGS Plus] API request:",
+      method,
+      url
+    );
+
+    const response = await fetch(url, {
+      ...options,
+      credentials: "include",
+      headers,
+    });
+
+    const contentType =
+      response.headers.get("content-type") || "";
+
+    const text = await response.text();
+
+    console.log(
+      "[OGS Plus] API response:",
+      response.status,
+      contentType,
+      text.slice(0, 1000)
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `HTTP ${response.status}: ${
+          text || response.statusText
+        }`
+      );
+    }
+
+    return {
+      status: response.status,
+      contentType,
+      text,
+    };
+  }
+
+  /**
+   * SGF 다운로드
+   */
+  async function getGameSgf(gameId) {
+    const response = await ogsFetch(
+      `games/${gameId}/sgf`,
+      {
+        method: "GET",
+        headers: {
+          Accept:
+            "application/x-go-sgf, text/plain, */*",
+        },
+      }
+    );
+
+    let sgf = response.text;
+
+    /*
+     * BOM 제거
+     */
+    sgf = sgf.replace(/^\uFEFF/, "").trim();
+
+    /*
+     * 혹시 JSON 문자열로 온 경우 처리
+     */
+    if (
+      sgf.startsWith('"') &&
+      sgf.endsWith('"')
+    ) {
+      try {
+        const parsed = JSON.parse(sgf);
+
+        if (typeof parsed === "string") {
+          sgf = parsed.trim();
+        }
+      } catch (e) {
+        // 그냥 원본 사용
+      }
+    }
+
+    if (!sgf) {
+      throw new Error(
+        "OGS에서 SGF 데이터가 비어 있습니다."
+      );
+    }
+
+    /*
+     * 정상적인 SGF는 게임 트리 "("로 시작한다.
+     */
+    if (!sgf.startsWith("(")) {
+      console.error(
+        "[OGS Plus] SGF가 아님:",
+        sgf
+      );
+
+      throw new Error(
+        "OGS가 SGF 대신 다른 데이터를 반환했습니다."
+      );
+    }
+
+    return sgf;
+  }
+
+  /**
+   * SGF를 File 객체로 변환
+   */
+  function makeFile(sgf, gameId) {
+    const blob = new Blob(
+      [sgf],
+      {
+        type: "application/x-go-sgf",
+      }
+    );
+
+    return new File(
+      [blob],
+      `game-${gameId}.sgf`,
+      {
+        type: "application/x-go-sgf",
+        lastModified: Date.now(),
+      }
+    );
+  }
+
+  /**
+   * SGF 업로드
+   */
+  async function uploadSgf(
+    file,
+    collectionId
+  ) {
+    const formData = new FormData();
+
+    /*
+     * OGS가 요구하는 정확한 field 이름
+     */
+    formData.append(
+      "file",
+      file,
+      file.name
+    );
+
+    /*
+     * 디버깅용
+     */
+    console.log(
+      "[OGS Plus] FormData:",
+      {
+        filename: file.name,
+        size: file.size,
+        type: file.type,
+        collectionId,
+      }
+    );
+
+    return ogsFetch(
+      `me/games/sgf/${collectionId}`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+  }
+
+  /**
+   * 게임 검색
+   */
+  async function searchGames(
+    query,
+    mode
+  ) {
     const currentUserId =
       Utils.getCurrentUserId();
 
     query = query.trim();
 
-    // 게임 ID로 직접 조회
+    /*
+     * 게임 ID 직접 입력
+     */
     if (/^\d+$/.test(query)) {
       try {
-        const game = await Utils.apiFetch(
-          `games/${query}`,
-        );
+        const response =
+          await Utils.apiFetch(
+            `games/${query}`
+          );
 
-        return [game];
+        return [response];
       } catch (e) {
         console.error(
-          "[OGS Plus] Game lookup failed:",
-          e,
+          "[OGS Plus] game lookup failed",
+          e
         );
 
         return [];
       }
     }
 
-    // 내 대국
-    if (mode === "mine" && currentUserId) {
+    /*
+     * 내 대국
+     */
+    if (
+      mode === "mine" &&
+      currentUserId
+    ) {
       try {
-        const data = await Utils.apiFetch(
-          `players/${currentUserId}/game_history/?page_size=15`,
-        );
+        const data =
+          await Utils.apiFetch(
+            `players/${currentUserId}/game_history/?page_size=15`
+          );
 
-        return (data.results || []).filter((g) => {
-          const b =
-            g.players?.black?.username || "";
+        const games =
+          data.results || [];
 
-          const w =
-            g.players?.white?.username || "";
+        if (!query) {
+          return games;
+        }
 
-          const q = query.toLowerCase();
+        const q =
+          query.toLowerCase();
+
+        return games.filter((game) => {
+          const black =
+            game.players?.black?.username ||
+            "";
+
+          const white =
+            game.players?.white?.username ||
+            "";
 
           return (
-            !q ||
-            b.toLowerCase().includes(q) ||
-            w.toLowerCase().includes(q)
+            black
+              .toLowerCase()
+              .includes(q) ||
+            white
+              .toLowerCase()
+              .includes(q)
           );
         });
       } catch (e) {
         console.error(
-          "[OGS Plus] Game history lookup failed:",
-          e,
+          "[OGS Plus] game history failed",
+          e
         );
 
         return [];
       }
     }
 
-    // 다른 사람의 대국
-    if (mode === "other" && query) {
+    /*
+     * 다른 플레이어
+     */
+    if (
+      mode === "other" &&
+      query
+    ) {
       try {
-        const found = await Utils.apiFetch(
-          `players/?username__istartswith=${encodeURIComponent(
-            query,
-          )}`,
-        );
+        const players =
+          await Utils.apiFetch(
+            `players/?username__istartswith=${encodeURIComponent(
+              query
+            )}`
+          );
 
         const player =
-          (found.results || [])[0];
+          (players.results || [])[0];
 
         if (!player) {
           return [];
         }
 
-        const data = await Utils.apiFetch(
-          `players/${player.id}/game_history/?page_size=15`,
-        );
+        const games =
+          await Utils.apiFetch(
+            `players/${player.id}/game_history/?page_size=15`
+          );
 
-        return data.results || [];
+        return games.results || [];
       } catch (e) {
         console.error(
-          "[OGS Plus] Other player lookup failed:",
-          e,
+          "[OGS Plus] player game history failed",
+          e
         );
 
         return [];
@@ -120,160 +379,18 @@
     return [];
   }
 
-  function gameLabel(g) {
-    const b =
-      g.players?.black?.username ||
-      g.black?.username ||
+  function gameLabel(game) {
+    const black =
+      game.players?.black?.username ||
+      game.black?.username ||
       "?";
 
-    const w =
-      g.players?.white?.username ||
-      g.white?.username ||
+    const white =
+      game.players?.white?.username ||
+      game.white?.username ||
       "?";
 
-    return `#${g.id} — ${b} vs ${w}`;
-  }
-
-  /**
-   * OGS에서 SGF 원문을 가져온다.
-   */
-  async function downloadGameSgf(gameId) {
-    console.log(
-      "[OGS Plus] Downloading SGF:",
-      gameId,
-    );
-
-    const response =
-      await Utils.apiFetchRaw(
-        `games/${gameId}/sgf`,
-        {
-          method: "GET",
-          headers: {
-            Accept:
-              "application/x-go-sgf, text/plain, */*",
-          },
-        },
-      );
-
-    const sgfString = response.text;
-
-    console.log(
-      "[OGS Plus] SGF response:",
-      sgfString.slice(0, 300),
-    );
-
-    if (
-      !sgfString ||
-      !sgfString.trim()
-    ) {
-      throw new Error(
-        "OGS에서 SGF 데이터가 비어 있습니다.",
-      );
-    }
-
-    const trimmed =
-      sgfString.trim();
-
-    /*
-     * 정상적인 SGF는 보통 "(;"로 시작한다.
-     *
-     * 혹시 BOM이 붙은 경우도 처리한다.
-     */
-    const cleanSgf =
-      trimmed.replace(/^\uFEFF/, "");
-
-    if (!cleanSgf.startsWith("(")) {
-      console.error(
-        "[OGS Plus] Invalid SGF response:",
-        sgfString,
-      );
-
-      throw new Error(
-        "OGS가 올바른 SGF 파일을 반환하지 않았습니다.",
-      );
-    }
-
-    return cleanSgf;
-  }
-
-  /**
-   * SGF 파일 생성
-   */
-  function createSgfFile(
-    sgfString,
-    gameId,
-  ) {
-    const blob = new Blob(
-      [sgfString],
-      {
-        type: "application/x-go-sgf;charset=UTF-8",
-      },
-    );
-
-    return new File(
-      [blob],
-      `game-${gameId}.sgf`,
-      {
-        type: "application/x-go-sgf",
-        lastModified: Date.now(),
-      },
-    );
-  }
-
-  /**
-   * SGF Library 업로드
-   */
-  async function uploadSgfFile(
-    file,
-    collectionId,
-  ) {
-    const formData =
-      new FormData();
-
-    /*
-     * 중요:
-     * Content-Type은 직접 지정하지 않는다.
-     *
-     * 브라우저가
-     * multipart/form-data; boundary=...
-     * 를 자동으로 만들어야 한다.
-     */
-    formData.append(
-      "file",
-      file,
-      file.name,
-    );
-
-    console.log(
-      "[OGS Plus] Uploading SGF:",
-      {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        collectionId,
-      },
-    );
-
-    const response =
-      await Utils.apiFetchRaw(
-        `me/games/sgf/${collectionId}`,
-        {
-          method: "POST",
-          body: formData,
-          headers: {
-            Accept:
-              "application/json, text/plain, */*",
-          },
-        },
-      );
-
-    console.log(
-      "[OGS Plus] Upload response:",
-      response.status,
-      response.text,
-    );
-
-    return response;
+    return `#${game.id} — ${black} vs ${white}`;
   }
 
   function buildModal(collectionId) {
@@ -286,7 +403,7 @@
         {
           class:
             "ogsplus-game-list",
-        },
+        }
       );
 
     const searchInput =
@@ -296,88 +413,37 @@
           type: "text",
           placeholder:
             Utils.t(
-              "sgf.searchPlaceholder",
+              "sgf.searchPlaceholder"
             ),
-        },
+        }
       );
 
-    async function runSearch() {
-      resultsList.innerHTML = "";
+    const modal =
+      Utils.createEl(
+        "div",
+        {
+          class:
+            "ogsplus-modal-backdrop",
+        }
+      );
 
-      const games =
-        await searchGames(
-          searchInput.value,
-          mode,
-        );
+    const modalBox =
+      Utils.createEl(
+        "div",
+        {
+          class:
+            "ogsplus-modal",
+        }
+      );
 
-      selectedGame = null;
-
-      if (!games.length) {
-        resultsList.appendChild(
-          Utils.createEl(
-            "div",
-            {
-              class:
-                "ogsplus-game-list-item",
-              style: {
-                opacity: "0.6",
-                cursor: "default",
-              },
-              text: "대국을 찾을 수 없습니다.",
-            },
-          ),
-        );
-
-        return;
-      }
-
-      games.forEach((g) => {
-        const item =
-          Utils.createEl(
-            "div",
-            {
-              class:
-                "ogsplus-game-list-item",
-
-              onClick: () => {
-                resultsList
-                  .querySelectorAll(
-                    ".ogsplus-game-list-item",
-                  )
-                  .forEach((el) =>
-                    el.classList.remove(
-                      "selected",
-                    ),
-                  );
-
-                item.classList.add(
-                  "selected",
-                );
-
-                selectedGame = g;
-
-                console.log(
-                  "[OGS Plus] Selected game:",
-                  g,
-                );
-              },
-            },
-            [
-              Utils.createEl(
-                "span",
-                {
-                  text:
-                    gameLabel(g),
-                },
-              ),
-            ],
-          );
-
-        resultsList.appendChild(
-          item,
-        );
-      });
-    }
+    const tabs =
+      Utils.createEl(
+        "div",
+        {
+          class:
+            "ogsplus-tabs",
+        }
+      );
 
     const tabMine =
       Utils.createEl(
@@ -385,26 +451,11 @@
         {
           class:
             "ogsplus-tab active",
-
           text:
             Utils.t(
-              "sgf.pickMine",
+              "sgf.pickMine"
             ),
-
-          onClick: () => {
-            mode = "mine";
-
-            tabMine.classList.add(
-              "active",
-            );
-
-            tabOther.classList.remove(
-              "active",
-            );
-
-            runSearch();
-          },
-        },
+        }
       );
 
     const tabOther =
@@ -413,280 +464,387 @@
         {
           class:
             "ogsplus-tab",
-
           text:
             Utils.t(
-              "sgf.pickOther",
+              "sgf.pickOther"
             ),
-
-          onClick: () => {
-            mode = "other";
-
-            tabOther.classList.add(
-              "active",
-            );
-
-            tabMine.classList.remove(
-              "active",
-            );
-
-            runSearch();
-          },
-        },
+        }
       );
+
+    tabs.appendChild(tabMine);
+    tabs.appendChild(tabOther);
+
+    async function search() {
+      resultsList.innerHTML =
+        "";
+
+      selectedGame = null;
+
+      const games =
+        await searchGames(
+          searchInput.value,
+          mode
+        );
+
+      if (!games.length) {
+        resultsList.appendChild(
+          Utils.createEl(
+            "div",
+            {
+              class:
+                "ogsplus-game-list-item",
+              text:
+                "대국을 찾을 수 없습니다.",
+            }
+          )
+        );
+
+        return;
+      }
+
+      for (const game of games) {
+        const item =
+          Utils.createEl(
+            "div",
+            {
+              class:
+                "ogsplus-game-list-item",
+              text:
+                gameLabel(game),
+            }
+          );
+
+        item.addEventListener(
+          "click",
+          () => {
+            resultsList
+              .querySelectorAll(
+                ".ogsplus-game-list-item"
+              )
+              .forEach((el) =>
+                el.classList.remove(
+                  "selected"
+                )
+              );
+
+            item.classList.add(
+              "selected"
+            );
+
+            selectedGame =
+              game;
+          }
+        );
+
+        resultsList.appendChild(
+          item
+        );
+      }
+    }
+
+    tabMine.addEventListener(
+      "click",
+      () => {
+        mode = "mine";
+
+        tabMine.classList.add(
+          "active"
+        );
+
+        tabOther.classList.remove(
+          "active"
+        );
+
+        search();
+      }
+    );
+
+    tabOther.addEventListener(
+      "click",
+      () => {
+        mode = "other";
+
+        tabOther.classList.add(
+          "active"
+        );
+
+        tabMine.classList.remove(
+          "active"
+        );
+
+        search();
+      }
+    );
 
     searchInput.addEventListener(
       "input",
       Utils.debounce(
-        runSearch,
-        400,
-      ),
+        search,
+        400
+      )
     );
 
-    const uploadBtn =
+    const uploadButton =
       Utils.createEl(
         "button",
         {
           class:
             "ogsplus-btn primary",
-
           text:
             Utils.t(
-              "sgf.upload",
+              "sgf.upload"
             ),
-
-          onClick:
-            async () => {
-              if (!selectedGame) {
-                Toast.showToast(
-                  "대국을 먼저 선택하세요.",
-                  "error",
-                );
-
-                return;
-              }
-
-              uploadBtn.disabled =
-                true;
-
-              uploadBtn.textContent =
-                "업로드 중...";
-
-              try {
-                console.log(
-                  "[OGS Plus] SGF upload started",
-                  {
-                    gameId:
-                      selectedGame.id,
-
-                    collectionId,
-                  },
-                );
-
-                /*
-                 * 1.
-                 * OGS에서 SGF 원문 가져오기
-                 */
-                const sgfString =
-                  await downloadGameSgf(
-                    selectedGame.id,
-                  );
-
-                /*
-                 * 2.
-                 * SGF 파일 생성
-                 */
-                const file =
-                  createSgfFile(
-                    sgfString,
-                    selectedGame.id,
-                  );
-
-                /*
-                 * 3.
-                 * OGS Library에 업로드
-                 */
-                const response =
-                  await uploadSgfFile(
-                    file,
-                    collectionId,
-                  );
-
-                console.log(
-                  "[OGS Plus] SGF upload successful:",
-                  response,
-                );
-
-                Toast.showToast(
-                  "SGF 업로드 완료",
-                  "success",
-                );
-
-                closeModal();
-
-                /*
-                 * Library 목록 새로고침
-                 */
-                setTimeout(
-                  () =>
-                    window.location.reload(),
-                  600,
-                );
-              } catch (e) {
-                console.error(
-                  "[OGS Plus] SGF upload failed:",
-                  e,
-                );
-
-                Toast.showToast(
-                  `업로드 실패: ${
-                    e?.message || e
-                  }`,
-                  "error",
-                );
-              } finally {
-                uploadBtn.disabled =
-                  false;
-
-                uploadBtn.textContent =
-                  Utils.t(
-                    "sgf.upload",
-                  );
-              }
-            },
-        },
+        }
       );
 
-    const cancelBtn =
+    const cancelButton =
       Utils.createEl(
         "button",
         {
           class:
             "ogsplus-btn",
-
-          text: "✕",
-
-          onClick: () =>
-            closeModal(),
-        },
+          text: "취소",
+        }
       );
 
-    const backdrop =
+    cancelButton.addEventListener(
+      "click",
+      () => modal.remove()
+    );
+
+    uploadButton.addEventListener(
+      "click",
+      async () => {
+        if (!selectedGame) {
+          Toast.showToast(
+            "대국을 선택하세요.",
+            "error"
+          );
+
+          return;
+        }
+
+        uploadButton.disabled =
+          true;
+
+        uploadButton.textContent =
+          "업로드 중...";
+
+        try {
+          console.log(
+            "[OGS Plus] ========================="
+          );
+
+          console.log(
+            "[OGS Plus] Upload start"
+          );
+
+          console.log(
+            "[OGS Plus] Game:",
+            selectedGame.id
+          );
+
+          console.log(
+            "[OGS Plus] Collection:",
+            collectionId
+          );
+
+          console.log(
+            "[OGS Plus] csrftoken exists:",
+            Boolean(
+              getCookie(
+                "csrftoken"
+              )
+            )
+          );
+
+          /*
+           * 1. SGF 가져오기
+           */
+          const sgf =
+            await getGameSgf(
+              selectedGame.id
+            );
+
+          console.log(
+            "[OGS Plus] SGF length:",
+            sgf.length
+          );
+
+          /*
+           * 2. File 생성
+           */
+          const file =
+            makeFile(
+              sgf,
+              selectedGame.id
+            );
+
+          /*
+           * 3. 업로드
+           */
+          const response =
+            await uploadSgf(
+              file,
+              collectionId
+            );
+
+          console.log(
+            "[OGS Plus] Upload successful:",
+            response
+          );
+
+          Toast.showToast(
+            "SGF 업로드 성공!",
+            "success"
+          );
+
+          modal.remove();
+
+          setTimeout(
+            () =>
+              window.location.reload(),
+            800
+          );
+        } catch (error) {
+          console.error(
+            "[OGS Plus] ========================="
+          );
+
+          console.error(
+            "[OGS Plus] SGF upload ERROR:",
+            error
+          );
+
+          console.error(
+            "[OGS Plus] ========================="
+          );
+
+          Toast.showToast(
+            `업로드 실패: ${
+              error.message ||
+              error
+            }`,
+            "error"
+          );
+        } finally {
+          uploadButton.disabled =
+            false;
+
+          uploadButton.textContent =
+            Utils.t(
+              "sgf.upload"
+            );
+        }
+      }
+    );
+
+    modal.addEventListener(
+      "click",
+      (event) => {
+        if (
+          event.target === modal
+        ) {
+          modal.remove();
+        }
+      }
+    );
+
+    modalBox.appendChild(
+      Utils.createEl(
+        "h3",
+        {
+          text:
+            `🎮 ${Utils.t(
+              "sgf.uploadButton"
+            )}`,
+        }
+      )
+    );
+
+    modalBox.appendChild(
+      tabs
+    );
+
+    modalBox.appendChild(
+      searchInput
+    );
+
+    modalBox.appendChild(
+      resultsList
+    );
+
+    const actions =
       Utils.createEl(
         "div",
         {
           class:
-            "ogsplus-modal-backdrop",
-
-          onClick: (e) => {
-            if (
-              e.target ===
-              backdrop
-            ) {
-              closeModal();
-            }
-          },
-        },
-        [
-          Utils.createEl(
-            "div",
-            {
-              class:
-                "ogsplus-modal",
-            },
-            [
-              Utils.createEl(
-                "h3",
-                {
-                  text: `🎮 ${Utils.t(
-                    "sgf.uploadButton",
-                  )}`,
-                },
-              ),
-
-              Utils.createEl(
-                "div",
-                {
-                  class:
-                    "ogsplus-tabs",
-                },
-                [
-                  tabMine,
-                  tabOther,
-                ],
-              ),
-
-              searchInput,
-
-              resultsList,
-
-              Utils.createEl(
-                "div",
-                {
-                  class:
-                    "ogsplus-modal-actions",
-                },
-                [
-                  cancelBtn,
-                  uploadBtn,
-                ],
-              ),
-            ],
-          ),
-        ],
+            "ogsplus-modal-actions",
+        }
       );
 
-    function closeModal() {
-      if (
-        backdrop &&
-        backdrop.parentNode
-      ) {
-        backdrop.remove();
-      }
-    }
-
-    document.body.appendChild(
-      backdrop,
+    actions.appendChild(
+      cancelButton
     );
 
-    runSearch();
+    actions.appendChild(
+      uploadButton
+    );
 
-    return backdrop;
+    modalBox.appendChild(
+      actions
+    );
+
+    modal.appendChild(
+      modalBox
+    );
+
+    document.body.appendChild(
+      modal
+    );
+
+    search();
+
+    return modal;
   }
 
   function injectButton(
     container,
-    collectionId,
+    collectionId
   ) {
     if (
       document.getElementById(
-        BUTTON_ID,
+        BUTTON_ID
       )
     ) {
       return;
     }
 
-    const btn =
+    const button =
       Utils.createEl(
         "button",
         {
           id: BUTTON_ID,
-
           class:
             "ogsplus-sgf-btn",
-
-          text: `🎮 ${Utils.t(
-            "sgf.uploadButton",
-          )}`,
-
-          onClick: () =>
-            buildModal(
-              collectionId,
-            ),
-        },
+          text:
+            `🎮 ${Utils.t(
+              "sgf.uploadButton"
+            )}`,
+        }
       );
 
-    container.prepend(btn);
+    button.addEventListener(
+      "click",
+      () =>
+        buildModal(
+          collectionId
+        )
+    );
+
+    container.prepend(
+      button
+    );
   }
 
   function tryInject() {
@@ -695,8 +853,7 @@
 
     if (
       !settings.masterEnabled ||
-      !settings.features
-        .sgfOgsUpload
+      !settings.features?.sgfOgsUpload
     ) {
       return;
     }
@@ -708,55 +865,53 @@
       return;
     }
 
-    const controlsRight =
+    const container =
       document.querySelector(
-        ".LibraryPlayer .controls-right",
+        ".LibraryPlayer .controls-right"
       );
 
-    if (controlsRight) {
+    if (container) {
       injectButton(
-        controlsRight,
-        params.collectionId,
+        container,
+        params.collectionId
       );
     }
   }
 
   Utils.watchElements(
     ".LibraryPlayer .controls-right",
-    () => tryInject(),
+    tryInject
   );
 
-  /*
-   * OGS SPA 라우팅 대응
-   */
-  const origPushState =
+  const originalPushState =
     history.pushState;
 
   history.pushState =
     function (...args) {
-      origPushState.apply(
+      originalPushState.apply(
         this,
-        args,
+        args
       );
 
       setTimeout(
         tryInject,
-        300,
+        300
       );
     };
 
   window.addEventListener(
     "popstate",
-    () =>
+    () => {
       setTimeout(
         tryInject,
-        300,
-      ),
+        300
+      );
+    }
   );
 
   tryInject();
 })(
   typeof window !== "undefined"
     ? window
-    : globalThis,
+    : globalThis
 );
