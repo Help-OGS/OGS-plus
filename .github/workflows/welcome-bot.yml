@@ -1,0 +1,21 @@
+name: PR Welcome Bot
+
+# 누군가 Pull Request(PR)를 '열었을 때(opened)' 작동합니다.
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Adminbot
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '👋 안녕하세요! 프로젝트에 PR을 올려주셔서 감사합니다. 검토 후 곧 피드백을 드릴게요!'
+            })
