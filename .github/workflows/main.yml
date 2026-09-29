@@ -1,0 +1,35 @@
+name: PR Welcome and Close Bot
+
+on:
+  pull_request:
+    types: [opened, closed]
+
+jobs:
+  pr_bot:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. PR이 처음 열렸을 때 (opened)
+      - name: Welcome Message
+        if: github.event.action == 'opened'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '👋 PR을 여신 것을 환영합니다!'
+            })
+
+      # 2. PR이 병합되었거나 닫혔을 때 (closed)
+      - name: Goodbye Message
+        if: github.event.action == 'closed'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🏁 PR이 성공적으로 종료되었습니다.'
+            })
