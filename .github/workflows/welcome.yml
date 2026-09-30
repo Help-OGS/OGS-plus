@@ -2,7 +2,8 @@ name: Welcome
 
 on:
   pull_request_target:
-    types: [opened]
+    types:
+      - opened
 
 permissions:
   issues: write
@@ -17,15 +18,9 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
-            const issueNumber = context.payload.pull_request.number;
-
-            const message = `👋 안녕하세요! PR을 보내주셔서 감사합니다.
-
-            기여해주신 내용을 확인하고 있습니다. 조금만 기다려 주세요! 🚀`;
-
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: issueNumber,
-              body: message
+              issue_number: context.issue.number,
+              body: '👋 안녕하세요! PR을 보내주셔서 감사합니다. 확인 후 리뷰하겠습니다.'
             });
