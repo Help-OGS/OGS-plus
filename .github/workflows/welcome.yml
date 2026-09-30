@@ -1,23 +1,31 @@
+name: Welcome
 
-Bump actions/github-script from 6 to 9 #1
-All jobs
-Run details
-Triggered via pull request 1 minute ago
-@dependabotdependabot[bot]
-opened
-#3
-dependabot/github_actions/actions/github-script-9
-Status
-Failure
-Total duration
-8s
-Artifacts
-–
+on:
+  pull_request_target:
+    types: [opened]
 
+permissions:
+  issues: write
+  pull-requests: write
 
-Annotations
-1 error and 1 notice
-welcome
-Unhandled error: HttpError: Resource not accessible by integration - https://docs.github.com/rest/issues/comments#create-an-issue-comment
-welcome
-"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+jobs:
+  welcome:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Welcome contributor
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const issueNumber = context.payload.pull_request.number;
+
+            const message = `👋 안녕하세요! PR을 보내주셔서 감사합니다.
+
+            기여해주신 내용을 확인하고 있습니다. 조금만 기다려 주세요! 🚀`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: message
+            });
