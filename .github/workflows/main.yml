@@ -11,7 +11,7 @@ jobs:
       # 1. PR이 처음 열렸을 때 (opened)
       - name: Welcome Message
         if: github.event.action == 'opened'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v9
         with:
           script: |
             github.rest.issues.createComment({
@@ -24,7 +24,7 @@ jobs:
       # 2. PR이 병합되었거나 닫혔을 때 (closed)
       - name: Goodbye Message
         if: github.event.action == 'closed'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v9
         with:
           script: |
             github.rest.issues.createComment({
