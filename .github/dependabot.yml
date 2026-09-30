@@ -1,7 +1,6 @@
 version: 2
 
 updates:
-  # GitHub Actions 의존성 자동 업데이트
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
