@@ -1,11 +1,6 @@
 /**
- * OGS Plus - Gomoku Demo Board Integrator
- *
- * 목적:
- * - OGS의 바둑 실시간 보드/데모 환경을 활용해
- *   실제 서버 게임이 아니라 로컬 전용 오목 데모를 실행한다.
- * - 서버에는 Go로 보이지 않고, 사용자에게만 오목 판처럼 보이도록 한다.
- * - 따내기는 없음. 5개 연속이면 승리.
+ * OGS Plus - Gomoku Demo Board with AI
+ * Local-only Gomoku game overlay with simple AI opponent
  */
 (function (global) {
   "use strict";
@@ -16,85 +11,29 @@
 
   const FEATURE_KEY = "gomoku";
   const BUTTON_ID = "ogsplus-gomoku-demo-button";
-  const OVERLAY_ID = "ogsplus-gomoku-overlay";
+  const MODAL_ID = "ogsplus-gomoku-demo-modal";
 
-  const state = {
-    size: 15,
-    board: [],
-    current: "black",
-    winner: null,
-    started: false,
-  };
-
-  function resetBoard(size = 15) {
-    state.size = size;
-    state.board = Array.from({ length: size }, () => Array(size).fill(null));
-    state.current = "black";
-    state.winner = null;
-    state.started = true;
-  }
-
-  function checkWinner(board, row, col, stone) {
-    const dirs = [
-      [1, 0],
-      [0, 1],
-      [1, 1],
-      [1, -1],
-    ];
-
-    for (const [dr, dc] of dirs) {
-      let count = 1;
-
-      const next = (rr, cc) => {
-        const r = rr + dr;
-        const c = cc + dc;
-        if (r < 0 || c < 0 || r >= board.length || c >= board.length) return false;
-        return board[r][c] === stone;
-      };
-
-      let r = row;
-      let c = col;
-      while (next(r, c)) {
-        count += 1;
-        r += dr;
-        c += dc;
-      }
-
-      r = row;
-      c = col;
-      while (next(-dr + r, -dc + c)) {
-        count += 1;
-        r -= dr;
-        c -= dc;
-      }
-
-      if (count >= 5) return true;
-    }
-
-    return false;
-  }
-
-  function createGomokuBoard(size = 15) {
-    const boardWrap = Utils.createEl("div", {
-      id: OVERLAY_ID,
+  function createModal() {
+    const modal = Utils.createEl("div", {
+      id: MODAL_ID,
       style: {
         position: "fixed",
-        inset: "0",
-        zIndex: "2147483647",
-        background: "rgba(16, 16, 20, 0.6)",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        zIndex: "2147483647",
       },
     });
 
     const panel = Utils.createEl("div", {
       style: {
-        width: "min(90vw, 760px)",
-        background: "#fff",
-        borderRadius: "16px",
-        boxShadow: "0 20px 40px rgba(0, 0, 0, 0.25)",
-        padding: "18px",
+        width: "min(92vw, 760px)",
+        background: "#ffffff",
+        borderRadius: "14px",
+        boxShadow: "0 18px 40px rgba(0,0,0,0.28)",
+        padding: "20px",
         fontFamily: "system-ui, sans-serif",
       },
     });
@@ -104,12 +43,16 @@
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: "12px",
+        marginBottom: "14px",
       },
     });
 
-    header.appendChild(Utils.createEl("h2", { text: "🎯 오목 데모", style: { margin: 0, fontSize: "24px" } }));
-    const closeBtn = Utils.createEl("button", {
+    header.appendChild(Utils.createEl("h2", {
+      text: "🎯 오목 vs AI",
+      style: { margin: 0, fontSize: "24px" },
+    }));
+
+    header.appendChild(Utils.createEl("button", {
       text: "✕",
       style: {
         border: "none",
@@ -117,75 +60,207 @@
         fontSize: "24px",
         cursor: "pointer",
       },
-      onClick: () => {
-        boardWrap.remove();
-        state.started = false;
-      },
-    });
-    header.appendChild(closeBtn);
+      onClick: () => modal.remove(),
+    }));
+
     panel.appendChild(header);
 
     const status = Utils.createEl("div", {
       id: "ogsplus-gomoku-status",
-      text: "흑 차례",
+      text: "흑 차례 (당신)",
       style: {
         marginBottom: "12px",
-        color: "#333",
         fontWeight: "700",
         textAlign: "center",
+        color: "#222",
       },
     });
     panel.appendChild(status);
 
+    const boardSize = 15;
+    const board = Array.from({ length: boardSize }, () => Array(boardSize).fill(null));
+    let current = "black";
+    let winner = null;
+    let thinking = false;
+
+    function checkWin(r, c, stone) {
+      const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+      for (const [dr, dc] of dirs) {
+        let count = 1;
+        let rr = r + dr;
+        let cc = c + dc;
+        while (rr >= 0 && cc >= 0 && rr < boardSize && cc < boardSize && board[rr][cc] === stone) {
+          count += 1;
+          rr += dr;
+          cc += dc;
+        }
+        rr = r - dr;
+        cc = c - dc;
+        while (rr >= 0 && cc >= 0 && rr < boardSize && cc < boardSize && board[rr][cc] === stone) {
+          count += 1;
+          rr -= dr;
+          cc -= dc;
+        }
+        if (count >= 5) return true;
+      }
+      return false;
+    }
+
+    function countStones(r, c, stone, dr, dc) {
+      let count = 0;
+      let rr = r + dr;
+      let cc = c + dc;
+      while (rr >= 0 && cc >= 0 && rr < boardSize && cc < boardSize && board[rr][cc] === stone) {
+        count += 1;
+        rr += dr;
+        cc += dc;
+      }
+      rr = r - dr;
+      cc = c - dc;
+      while (rr >= 0 && cc >= 0 && rr < boardSize && cc < boardSize && board[rr][cc] === stone) {
+        count += 1;
+        rr -= dr;
+        cc -= dc;
+      }
+      return count;
+    }
+
+    function scoreMove(r, c) {
+      let score = 0;
+      
+      // 중앙이 가까울수록 높은 점수
+      const centerDist = Math.abs(r - 7.5) + Math.abs(c - 7.5);
+      score += (15 - centerDist) * 10;
+
+      // 우리 돌과 인접하면 높은 점수
+      for (const [dr, dc] of [[1,0],[0,1],[1,1],[1,-1],[-1,0],[0,-1],[-1,-1],[-1,1]]) {
+        const nr = r + dr;
+        const nc = c + dc;
+        if (nr >= 0 && nc >= 0 && nr < boardSize && nc < boardSize && board[nr][nc] === "white") {
+          score += 50;
+        }
+      }
+
+      // 우리 돌(백) 라인 길이
+      const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+      for (const [dr, dc] of dirs) {
+        const count = countStones(r, c, "white", dr, dc);
+        if (count >= 4) score += 10000; // 5목 완성
+        else if (count === 3) score += 5000;
+        else if (count === 2) score += 1000;
+        else if (count === 1) score += 100;
+      }
+
+      // 상대 돌(흑) 차단
+      for (const [dr, dc] of dirs) {
+        const count = countStones(r, c, "black", dr, dc);
+        if (count >= 4) score += 8000; // 상대 5목 방어
+        else if (count === 3) score += 4000;
+        else if (count === 2) score += 500;
+      }
+
+      return score;
+    }
+
+    function getAIMove() {
+      const moves = [];
+      let maxScore = -Infinity;
+
+      for (let r = 0; r < boardSize; r += 1) {
+        for (let c = 0; c < boardSize; c += 1) {
+          if (board[r][c]) continue;
+          
+          const score = scoreMove(r, c);
+          if (score > maxScore) {
+            maxScore = score;
+            moves.length = 0;
+            moves.push([r, c, score]);
+          } else if (score === maxScore) {
+            moves.push([r, c, score]);
+          }
+        }
+      }
+
+      if (moves.length === 0) return null;
+      return moves[Math.floor(Math.random() * Math.min(3, moves.length))];
+    }
+
     const grid = Utils.createEl("div", {
       style: {
         display: "grid",
-        gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
+        gridTemplateColumns: `repeat(${boardSize}, minmax(0, 1fr))`,
         gap: "2px",
-        background: "#d6b06d",
+        background: "#d0a866",
         padding: "8px",
         borderRadius: "8px",
       },
     });
 
-    for (let row = 0; row < size; row += 1) {
-      for (let col = 0; col < size; col += 1) {
+    const cells = [];
+    for (let row = 0; row < boardSize; row += 1) {
+      for (let col = 0; col < boardSize; col += 1) {
         const cell = Utils.createEl("button", {
           type: "button",
           style: {
             width: "100%",
             aspectRatio: "1 / 1",
             border: "1px solid rgba(0,0,0,0.18)",
-            background: "#e8c47d",
-            fontSize: "18px",
-            fontWeight: "700",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            background: "#e7c57a",
             color: "#111",
+            fontWeight: "700",
+            fontSize: "16px",
+            cursor: "pointer",
           },
           onClick: () => {
-            if (!state.started || state.winner) return;
-            if (state.board[row][col]) return;
+            if (winner || board[row][col] || thinking || current !== "black") return;
+            
+            board[row][col] = "black";
+            cell.textContent = "●";
+            cell.style.background = "#111";
+            cell.style.color = "#fff";
 
-            state.board[row][col] = state.current;
-            cell.textContent = state.current === "black" ? "●" : "○";
-            cell.style.color = state.current === "black" ? "#111" : "#fff";
-            cell.style.background = state.current === "black" ? "#111" : "#f2f2f2";
-
-            if (checkWinner(state.board, row, col, state.current)) {
-              state.winner = state.current;
-              status.textContent = `${state.current === "black" ? "흑" : "백"} 승리!`;
-              Toast.showToast(`오목 승리: ${state.current === "black" ? "흑" : "백"}`, "success");
+            if (checkWin(row, col, "black")) {
+              winner = "black";
+              status.textContent = "당신이 승리했습니다!";
+              Toast.showToast("오목 승리: 흑", "success");
               return;
             }
 
-            state.current = state.current === "black" ? "white" : "black";
-            status.textContent = `${state.current === "black" ? "흑" : "백"} 차례`;
+            current = "white";
+            status.textContent = "AI 생각 중...";
+            thinking = true;
+
+            setTimeout(() => {
+              const move = getAIMove();
+              if (!move) {
+                status.textContent = "무승부!";
+                return;
+              }
+
+              const [ar, ac] = move;
+              board[ar][ac] = "white";
+              const aiCell = cells[ar * boardSize + ac];
+              aiCell.textContent = "○";
+              aiCell.style.background = "#f5f5f5";
+              aiCell.style.color = "#111";
+
+              if (checkWin(ar, ac, "white")) {
+                winner = "white";
+                status.textContent = "AI가 승리했습니다!";
+                Toast.showToast("오목 패배: 백", "error");
+                thinking = false;
+                return;
+              }
+
+              current = "black";
+              status.textContent = "흑 차례 (당신)";
+              thinking = false;
+            }, 400);
           },
         });
+
         grid.appendChild(cell);
+        cells.push(cell);
       }
     }
 
@@ -194,77 +269,71 @@
     const footer = Utils.createEl("div", {
       style: {
         display: "flex",
-        justifyContent: "space-between",
+        gap: "10px",
         marginTop: "14px",
-        gap: "8px",
       },
     });
 
-    footer.appendChild(
-      Utils.createEl("button", {
-        text: "초기화",
-        style: {
-          flex: "1",
-          padding: "10px 12px",
-          borderRadius: "8px",
-          border: "1px solid #ddd",
-          background: "#f7f7f7",
-          cursor: "pointer",
-        },
-        onClick: () => {
-          resetBoard(size);
-          Array.from(grid.children).forEach((node) => {
-            node.textContent = "";
-            node.style.background = "#e8c47d";
-            node.style.color = "#111";
-          });
-          status.textContent = "흑 차례";
-          state.winner = null;
-        },
-      }),
-    );
+    footer.appendChild(Utils.createEl("button", {
+      text: "초기화",
+      style: {
+        flex: "1",
+        padding: "10px 12px",
+        borderRadius: "8px",
+        border: "1px solid #ddd",
+        background: "#f6f6f6",
+        cursor: "pointer",
+      },
+      onClick: () => {
+        for (let i = 0; i < boardSize * boardSize; i += 1) {
+          const cell = cells[i];
+          cell.textContent = "";
+          cell.style.background = "#e7c57a";
+          cell.style.color = "#111";
+        }
+        for (let r = 0; r < boardSize; r += 1) {
+          for (let c = 0; c < boardSize; c += 1) {
+            board[r][c] = null;
+          }
+        }
+        current = "black";
+        winner = null;
+        thinking = false;
+        status.textContent = "흑 차례 (당신)";
+      },
+    }));
 
-    footer.appendChild(
-      Utils.createEl("button", {
-        text: "닫기",
-        style: {
-          flex: "1",
-          padding: "10px 12px",
-          borderRadius: "8px",
-          border: "none",
-          background: "#4f6cf7",
-          color: "#fff",
-          cursor: "pointer",
-        },
-        onClick: () => boardWrap.remove(),
-      }),
-    );
+    footer.appendChild(Utils.createEl("button", {
+      text: "닫기",
+      style: {
+        flex: "1",
+        padding: "10px 12px",
+        borderRadius: "8px",
+        border: "none",
+        background: "#4f6cf7",
+        color: "#fff",
+        cursor: "pointer",
+      },
+      onClick: () => modal.remove(),
+    }));
 
     panel.appendChild(footer);
-    boardWrap.appendChild(panel);
-    resetBoard(size);
-    return boardWrap;
+    modal.appendChild(panel);
+    return modal;
   }
 
-  function installGomokuButton() {
+  function injectMenuButton() {
     if (document.getElementById(BUTTON_ID)) return;
 
-    const candidates = [
-      document.querySelector(".MainNav"),
-      document.querySelector("nav"),
-      document.querySelector("[data-testid='main-nav']"),
-      document.querySelector(".navigation"),
-    ].filter(Boolean);
-
-    const nav = candidates[0];
+    const nav = document.querySelector(".MainNav") || document.querySelector("nav") || document.querySelector("[data-testid='main-nav']") || document.querySelector(".navigation");
     if (!nav) return;
 
-    const playLinks = nav.querySelectorAll("a, button, [role='menuitem']");
+    const items = nav.querySelectorAll("a, button, [role='menuitem']");
     let anchor = null;
 
-    for (const item of playLinks) {
-      const label = (item.textContent || "").trim().toLowerCase();
-      if (label.includes("play") || label.includes("game") || label.includes("경기")) {
+    for (const item of items) {
+      const text = (item.textContent || "").trim().toLowerCase();
+      if (text.includes("play") || text.includes("game") || text.includes("경기")) {
         anchor = item;
         break;
       }
@@ -272,7 +341,7 @@
 
     if (!anchor) return;
 
-    const btn = Utils.createEl("a", {
+    const button = Utils.createEl("a", {
       id: BUTTON_ID,
       href: "#",
       text: "🎯 오목",
@@ -281,8 +350,8 @@
         marginLeft: "8px",
         padding: "8px 12px",
         borderRadius: "6px",
-        color: "#fff",
         background: "#4f7cff",
+        color: "#fff",
         fontWeight: "700",
         textDecoration: "none",
         cursor: "pointer",
@@ -290,13 +359,12 @@
       onClick: (event) => {
         event.preventDefault();
         event.stopPropagation();
-        const overlay = createGomokuBoard(15);
-        document.body.appendChild(overlay);
+        document.body.appendChild(createModal());
       },
     });
 
     if (anchor.parentNode) {
-      anchor.parentNode.insertBefore(btn, anchor.nextSibling);
+      anchor.parentNode.insertBefore(button, anchor.nextSibling);
     }
   }
 
@@ -304,20 +372,17 @@
     const settings = await Utils.loadSettings();
     if (!settings.masterEnabled || !settings.features[FEATURE_KEY]) return;
 
-    installGomokuButton();
+    injectMenuButton();
 
     const observer = new MutationObserver(() => {
-      if (!document.getElementById(BUTTON_ID)) {
-        installGomokuButton();
-      }
+      if (!document.getElementById(BUTTON_ID)) injectMenuButton();
     });
-
     observer.observe(document.body, { childList: true, subtree: true });
 
     Storage.onSettingsChanged((newVal) => {
       const enabled = newVal && newVal.masterEnabled && newVal.features[FEATURE_KEY];
       const btn = document.getElementById(BUTTON_ID);
-      if (enabled && !btn) installGomokuButton();
+      if (enabled && !btn) injectMenuButton();
       if (!enabled && btn) btn.remove();
     });
   }
