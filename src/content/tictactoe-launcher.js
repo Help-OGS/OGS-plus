@@ -1,12 +1,11 @@
 /**
  * OGS Plus - Tic-Tac-Toe 게임 런처
- * "경기하기" 버튼 아래에 "택" 항목을 추가하고, 택 모드로 게임을 생성
  * 
- * 구현 원리:
- * - OGS의 바둑 경기를 친선전/비공개로 생성
- * - 시스템에서는 정상적인 바둑 경기로 인식
- * - 확장 사용자에게만 UI를 택으로 표시
- * - 랜덤 매칭, 기본 바둑판 크기는 랜덤
+ * 구현 전략:
+ * 1. "Play" 네비게이션 아래에 "🎮 Tic-Tac-Toe" 항목 추가
+ * 2. 게임은 친선전(casual) + 비공개(private)로 서버에서 바둑으로 등록
+ * 3. 확장 사용자에게만 UI 상에서 "택"으로 표시
+ * 4. OGS API를 통한 안전한 CSRF 토큰 기반 통신
  */
 (function (global) {
   "use strict";
@@ -15,295 +14,429 @@
   const Storage = global.OGSPlusStorage;
   const Toast = global.OGSPlusToast;
 
-  const TICTACTOE_ID = "ogsplus-tictactoe-launcher";
-  const TICTACTOE_MENU_ID = "ogsplus-tictactoe-menu";
+  const FEATURE_KEY = "tictactoe";
+  const LAUNCHER_ID = "ogsplus-ttt-launcher";
+  const MODAL_ID = "ogsplus-ttt-modal";
 
   /**
-   * 택 게임 설정 모달 UI 생성
+   * 택 게임 설정 모달 생성
    */
   function createTicTacToeModal() {
     const modal = Utils.createEl("div", {
-      class: "ogsplus-modal ogsplus-tictactoe-modal",
-      id: "ogsplus-tictactoe-modal",
+      id: MODAL_ID,
+      class: "ogsplus-modal-backdrop",
+      style: {
+        position: "fixed",
+        top: "0",
+        left: "0",
+        width: "100%",
+        height: "100%",
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: "10000",
+      },
     });
 
-    const overlay = Utils.createEl("div", { class: "ogsplus-modal-overlay" });
-    overlay.addEventListener("click", () => modal.remove());
+    const container = Utils.createEl("div", {
+      class: "ogsplus-ttt-modal",
+      style: {
+        backgroundColor: "white",
+        borderRadius: "8px",
+        padding: "24px",
+        maxWidth: "500px",
+        width: "90%",
+        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+        fontFamily: "system-ui, sans-serif",
+      },
+    });
 
-    const content = Utils.createEl("div", { class: "ogsplus-modal-content" });
+    // 헤더
+    const header = Utils.createEl("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "20px",
+        borderBottom: "1px solid #e0e0e0",
+        paddingBottom: "12px",
+      },
+    });
+    header.appendChild(Utils.createEl("h2", { text: "🎮 Tic-Tac-Toe 게임", style: { margin: "0" } }));
+    const closeBtn = Utils.createEl("button", {
+      text: "✕",
+      style: {
+        border: "none",
+        background: "none",
+        fontSize: "20px",
+        cursor: "pointer",
+        color: "#666",
+      },
+      onClick: () => modal.remove(),
+    });
+    header.appendChild(closeBtn);
+    container.appendChild(header);
 
-    const header = Utils.createEl("div", { class: "ogsplus-modal-header" }, [
-      Utils.createEl("h2", { text: "🎮 Tic-Tac-Toe 게임" }),
-      Utils.createEl("button", {
-        class: "ogsplus-modal-close",
-        text: "✕",
-        onClick: () => modal.remove(),
-      }),
-    ]);
-    content.appendChild(header);
-
-    const body = Utils.createEl("div", { class: "ogsplus-modal-body" });
+    // 본문
+    const body = Utils.createEl("div", { style: { marginBottom: "20px" } });
 
     // 설명
     body.appendChild(
       Utils.createEl("p", {
-        class: "ogsplus-modal-desc",
-        text: "택(Tic-Tac-Toe) 게임을 OGS에서 플레이합니다.",
+        text: "친선전 비공개 게임으로 택을 플레이합니다. 시스템에는 바둑 경기로 등록되지만, 확장 사용자에게만 택으로 표시됩니다.",
+        style: { fontSize: "14px", color: "#555", marginBottom: "12px", lineHeight: "1.5" },
       })
     );
 
-    body.appendChild(
-      Utils.createEl("p", {
-        class: "ogsplus-modal-info",
-        text: "⚠️ 친선전(Casual) • 비공개(Private) • 랜덤 매칭 • 확장 사용자에게만 택으로 표시",
-      })
-    );
+    // 게임 모드 선택
+    const modeGroup = createFormGroup("게임 모드", [
+      { value: "random", label: "🎲 랜덤 매칭" },
+      { value: "bot", label: "🤖 AI 봇 대전" },
+    ]);
+    const modeSelect = modeGroup.querySelector("select");
+    body.appendChild(modeGroup);
 
-    // 게임 유형 선택
-    const modeLabel = Utils.createEl("label", { text: "게임 유형:" });
-    const modeSelect = Utils.createEl(
-      "select",
-      { class: "ogsplus-select" },
-      [
-        Utils.createEl("option", { value: "random", text: "🎲 랜덤 매칭" }),
-        Utils.createEl("option", { value: "bot", text: "🤖 AI 봇과 대전" }),
-      ]
-    );
-    body.appendChild(Utils.createEl("div", { class: "ogsplus-form-group" }, [modeLabel, modeSelect]));
+    // 색상 선택
+    const colorGroup = createFormGroup("색상", [
+      { value: "random", label: "⚫⚪ 랜덤" },
+      { value: "black", label: "⚫ 흑(선공)" },
+      { value: "white", label: "⚪ 백(후공)" },
+    ]);
+    const colorSelect = colorGroup.querySelector("select");
+    body.appendChild(colorGroup);
 
-    // 색상 선택 (Random Match일 경우)
-    const colorLabel = Utils.createEl("label", { text: "색상:" });
-    const colorSelect = Utils.createEl(
-      "select",
-      { class: "ogsplus-select" },
-      [
-        Utils.createEl("option", { value: "random", text: "⚫⚪ 랜덤" }),
-        Utils.createEl("option", { value: "black", text: "⚫ 흑(선공)" }),
-        Utils.createEl("option", { value: "white", text: "⚪ 백(후공)" }),
-      ]
-    );
-    body.appendChild(Utils.createEl("div", { class: "ogsplus-form-group" }, [colorLabel, colorSelect]));
+    // AI 난이도 (봇 모드일 때만 보임)
+    const diffGroup = createFormGroup("AI 난이도", [
+      { value: "1", label: "🟢 쉬움" },
+      { value: "3", label: "🟡 중간" },
+      { value: "6", label: "🔴 어려움" },
+    ]);
+    const diffSelect = diffGroup.querySelector("select");
+    body.appendChild(diffGroup);
 
-    // 게임 설정 (난이도 등)
-    const diffLabel = Utils.createEl("label", { text: "AI 난이도:" });
-    const diffSelect = Utils.createEl(
-      "select",
-      { class: "ogsplus-select" },
-      [
-        Utils.createEl("option", { value: "easy", text: "쉬움" }),
-        Utils.createEl("option", { value: "normal", text: "보통" }),
-        Utils.createEl("option", { value: "hard", text: "어려움" }),
-      ]
-    );
-    body.appendChild(Utils.createEl("div", { class: "ogsplus-form-group" }, [diffLabel, diffSelect]));
+    // 모드 변경 시 난이도 표시/숨김
+    modeSelect.addEventListener("change", (e) => {
+      diffGroup.style.display = e.target.value === "bot" ? "block" : "none";
+    });
+    diffGroup.style.display = "none";
 
-    content.appendChild(body);
+    container.appendChild(body);
 
-    const footer = Utils.createEl("div", { class: "ogsplus-modal-footer" });
-    footer.appendChild(
-      Utils.createEl("button", {
-        class: "ogsplus-btn",
-        text: "취소",
-        onClick: () => modal.remove(),
-      })
-    );
-    footer.appendChild(
-      Utils.createEl("button", {
-        class: "ogsplus-btn primary",
-        text: "게임 시작",
-        onClick: async () => {
-          const mode = modeSelect.value;
-          const color = colorSelect.value;
-          const difficulty = diffSelect.value;
-          
-          modal.remove();
-          await launchTicTacToeGame(mode, color, difficulty);
-        },
-      })
-    );
-    content.appendChild(footer);
+    // 버튼
+    const footer = Utils.createEl("div", {
+      style: {
+        display: "flex",
+        gap: "12px",
+        justifyContent: "flex-end",
+        borderTop: "1px solid #e0e0e0",
+        paddingTop: "20px",
+      },
+    });
 
-    modal.appendChild(overlay);
-    modal.appendChild(content);
+    const cancelBtn = Utils.createEl("button", {
+      text: "취소",
+      style: {
+        padding: "8px 16px",
+        border: "1px solid #ccc",
+        borderRadius: "4px",
+        backgroundColor: "#f5f5f5",
+        cursor: "pointer",
+        fontSize: "14px",
+      },
+      onClick: () => modal.remove(),
+    });
+    footer.appendChild(cancelBtn);
 
+    const startBtn = Utils.createEl("button", {
+      text: "게임 시작",
+      style: {
+        padding: "8px 16px",
+        border: "none",
+        borderRadius: "4px",
+        backgroundColor: "#4CAF50",
+        color: "white",
+        cursor: "pointer",
+        fontSize: "14px",
+        fontWeight: "bold",
+      },
+      onClick: async () => {
+        startBtn.disabled = true;
+        modal.remove();
+        await launchTicTacToeGame(modeSelect.value, colorSelect.value, diffSelect.value);
+      },
+    });
+    footer.appendChild(startBtn);
+    container.appendChild(footer);
+
+    modal.appendChild(container);
     return modal;
   }
 
   /**
-   * OGS API를 통해 택 게임 시작
-   * 친선전(casual), 비공개(private)로 설정
+   * 폼 그룹 헬퍼
    */
-  async function launchTicTacToeGame(mode, color, difficulty) {
-    try {
-      Toast.showToast("택 게임을 시작 중입니다...", "info");
+  function createFormGroup(label, options) {
+    const group = Utils.createEl("div", { style: { marginBottom: "16px" } });
 
-      // OGS API 호출: 게임 생성
+    group.appendChild(
+      Utils.createEl("label", {
+        text: label + ":",
+        style: {
+          display: "block",
+          marginBottom: "6px",
+          fontSize: "14px",
+          fontWeight: "500",
+          color: "#333",
+        },
+      })
+    );
+
+    const select = Utils.createEl(
+      "select",
+      {
+        style: {
+          width: "100%",
+          padding: "8px",
+          borderRadius: "4px",
+          border: "1px solid #ccc",
+          fontSize: "14px",
+          boxSizing: "border-box",
+        },
+      },
+      options.map((opt) => Utils.createEl("option", { value: opt.value, text: opt.label }))
+    );
+
+    group.appendChild(select);
+    return group;
+  }
+
+  /**
+   * OGS API를 통해 택 게임 생성 및 시작
+   * 서버는 이를 바둑 경기로 인식하지만, 클라이언트는 택으로 표시
+   */
+  async function launchTicTacToeGame(mode, colorPref, difficulty) {
+    try {
+      Toast.showToast("택 게임을 준비 중입니다...", "info");
+
+      // 게임 설정 구성
       const gamePayload = {
-        // 택 게임 특수 표식
-        rules: "chinese", // 기본 바둑 규칙 (시스템에서는 바둑으로 인식)
+        // 바둑판 크기 (택의 일반적인 크기: 3x3, 5x5)
+        width: Math.random() > 0.5 ? 3 : 5,
+        height: Math.random() > 0.5 ? 3 : 5,
+
+        // 기본 바둑 규칙 (시스템에서는 바둑으로 인식)
+        rules: "chinese",
         handicap: 0,
         komi: 0.5,
+
+        // 시간 제한 (빠른 게임)
         time_control: {
           system: "byoyomi",
           main_time: 300, // 5분
           period_time: 30,
           periods: 5,
         },
+
         // 친선전 + 비공개
         ladder: false,
         ranked: false,
         private: true,
-        // 택 게임 메타데이터 (커스텀 필드)
+
+        // 택 메타데이터
         metadata: {
           game_type: "tictactoe",
+          ttt_color_preference: colorPref,
           ttt_difficulty: difficulty,
-          ttt_color_preference: color,
           extension: "OGS-Plus",
         },
       };
 
-      // 바둑판 크기를 랜덤으로 설정 (3x3, 5x5 중 선택)
-      const boardSizes = [3, 5];
-      const randomSize = boardSizes[Math.floor(Math.random() * boardSizes.length)];
-      gamePayload.width = randomSize;
-      gamePayload.height = randomSize;
+      let gameData;
 
-      // 모드에 따라 API 호출
-      let response;
       if (mode === "random") {
-        // 랜덤 매칭
-        response = await fetch("/api/v1/games", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(gamePayload),
-        });
+        // 랜덤 매칭: 자동 매칭 큐에 추가
+        gameData = await createRandomMatchGame(gamePayload);
       } else if (mode === "bot") {
-        // AI 봇과의 대전
-        // 봇 선택 (difficulty에 따라)
-        const botUserId = await selectAIBot(difficulty);
-        gamePayload.opponent_id = botUserId;
-
-        response = await fetch("/api/v1/games", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(gamePayload),
-        });
+        // AI 봇 대전
+        gameData = await createBotGame(gamePayload, difficulty);
       }
 
-      if (!response.ok) {
-        throw new Error(`게임 생성 실패: ${response.statusText}`);
+      if (!gameData || !gameData.id) {
+        throw new Error("게임 생성에 실패했습니다.");
       }
-
-      const gameData = await response.json();
-      const gameId = gameData.id;
 
       // 게임 페이지로 이동
-      window.location.href = `/game/${gameId}`;
-
-      Toast.showToast("택 게임이 생성되었습니다!", "success");
+      window.location.href = `/game/${gameData.id}`;
+      Toast.showToast(`택 게임 #${gameData.id}를 시작합니다!`, "success");
     } catch (error) {
-      console.error("[OGS Plus] Tic-Tac-Toe 게임 생성 오류:", error);
-      Toast.showToast(`오류: ${error.message}`, "error");
+      console.error("[OGS Plus] Tic-Tac-Toe 오류:", error);
+      Toast.showToast(`오류: ${error.message || "게임 생성 실패"}`, "error");
     }
   }
 
   /**
-   * 난이도에 따라 적절한 봇 선택
+   * 랜덤 매칭 게임 생성
    */
-  async function selectAIBot(difficulty) {
+  async function createRandomMatchGame(payload) {
     try {
-      // OGS의 알려진 봇 사용자 ID
-      // 실제 구현에서는 API를 통해 봇 목록을 조회해야 함
-      const bots = {
-        easy: 1, // 예: 약한 봇
-        normal: 2, // 중간 난이도 봇
-        hard: 3, // 강한 봇
+      // OGS API: POST /api/v1/games
+      const response = await Utils.apiFetch("games", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      return response;
+    } catch (error) {
+      console.error("[OGS Plus] 랜덤 매칭 실패:", error);
+      throw new Error("랜덤 매칭 게임을 생성할 수 없습니다.");
+    }
+  }
+
+  /**
+   * AI 봇 대전 게임 생성
+   * OGS의 알려진 봇과 매칭
+   */
+  async function createBotGame(payload, difficulty) {
+    try {
+      // OGS의 AI 봇 매핑 (난이도 → 봇 ID)
+      // 실제 OGS 봇 ID는 환경에 따라 다름
+      const botMap = {
+        "1": 294, // GnuGo 9x9
+        "3": 5, // Leela Zero (중급)
+        "6": 6, // Leela Zero (강급)
       };
 
-      return bots[difficulty] || bots.normal;
+      const botUserId = botMap[difficulty] || botMap["3"];
+
+      // 대전 상대 설정
+      payload.opponent_id = botUserId;
+
+      const response = await Utils.apiFetch("games", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      return response;
     } catch (error) {
-      console.error("[OGS Plus] 봇 선택 오류:", error);
-      return 2; // 기본값: 중간 난이도
+      console.error("[OGS Plus] AI 봇 게임 생성 실패:", error);
+      throw new Error("AI 봇 게임을 생성할 수 없습니다.");
     }
   }
 
   /**
-   * "경기하기" 섹션에 택 메뉴 추가
+   * OGS 네비게이션에 택 런처 추가
+   * OGS의 실제 DOM 구조에 맞춰 삽입
    */
-  function injectTicTacToeMenu() {
-    // "경기하기" 버튼 또는 메뉴를 찾기
-    // OGS의 네비게이션 구조에 따라 선택자 조정 필요
-    const playSection = document.querySelector("nav") || document.querySelector(".NavigationBar");
-    
-    if (!playSection || document.getElementById(TICTACTOE_ID)) {
-      return; // 이미 주입됨 또는 해당 요소 없음
+  function injectTicTacToeLauncher() {
+    // 이미 삽입됨
+    if (document.getElementById(LAUNCHER_ID)) {
+      return;
     }
 
-    // "경기하기" 메뉴 아이템 찾기
-    const gameMenuItems = playSection.querySelectorAll("a, button, [role='menuitem']");
-    let playGameItem = null;
+    // OGS 네비게이션 찾기 (다양한 선택자 시도)
+    let navContainer = document.querySelector(".MainNav") ||
+      document.querySelector("[data-testid='main-nav']") ||
+      document.querySelector("nav") ||
+      document.querySelector(".navigation");
 
-    for (const item of gameMenuItems) {
-      if (
-        item.textContent.includes("경기") ||
-        item.textContent.includes("Play") ||
-        item.textContent.includes("Game")
-      ) {
-        playGameItem = item;
+    if (!navContainer) {
+      return; // 네비게이션을 찾을 수 없음
+    }
+
+    // "Play" 메뉴 아이템 찾기
+    const playMenuItems = navContainer.querySelectorAll("a, button, [role='menuitem']");
+    let playItem = null;
+
+    for (const item of playMenuItems) {
+      const text = item.textContent.toLowerCase();
+      if (text.includes("play") || text.includes("경기")) {
+        playItem = item;
         break;
       }
     }
 
-    if (!playGameItem) {
-      return; // "경기하기" 메뉴를 찾을 수 없음
+    if (!playItem) {
+      return; // Play 메뉴를 찾을 수 없음
     }
 
-    // 택 메뉴 아이템 생성
-    const tictactoeItem = Utils.createEl("a", {
-      id: TICTACTOE_ID,
-      class: "ogsplus-tictactoe-menu-item",
+    // 택 런처 메뉴 아이템 생성
+    const tttLauncher = Utils.createEl("a", {
+      id: LAUNCHER_ID,
       href: "#",
-      text: "🎮 택",
+      class: "ogsplus-ttt-nav-item",
+      text: "🎮 Tic-Tac-Toe",
+      style: {
+        display: "inline-block",
+        marginLeft: "8px",
+        padding: "8px 12px",
+        borderRadius: "4px",
+        backgroundColor: "#FF6B6B",
+        color: "white",
+        textDecoration: "none",
+        fontSize: "14px",
+        cursor: "pointer",
+        transition: "background-color 0.2s",
+      },
       onClick: (e) => {
         e.preventDefault();
+        e.stopPropagation();
         const modal = createTicTacToeModal();
         document.body.appendChild(modal);
       },
     });
 
-    // "경기하기" 메뉴 다음에 택 메뉴 삽입
-    if (playGameItem.parentNode) {
-      playGameItem.parentNode.insertBefore(tictactoeItem, playGameItem.nextSibling);
+    // 호버 효과
+    tttLauncher.addEventListener("mouseover", () => {
+      tttLauncher.style.backgroundColor = "#FF5252";
+    });
+    tttLauncher.addEventListener("mouseout", () => {
+      tttLauncher.style.backgroundColor = "#FF6B6B";
+    });
+
+    // Play 메뉴 다음에 삽입
+    if (playItem.parentNode) {
+      playItem.parentNode.insertBefore(tttLauncher, playItem.nextSibling);
     }
   }
 
   /**
-   * 페이지 준비 완료 후 메뉴 주입
+   * 초기화
    */
-  function initialize() {
-    Storage.getSettings().then((settings) => {
-      if (!settings.masterEnabled || !settings.features.tictactoe) {
-        return; // 택 기능 비활성화됨
-      }
+  async function initialize() {
+    const settings = await Utils.loadSettings();
 
-      // 네비게이션 로드 대기
-      Utils.watchElements("nav, .NavigationBar", () => {
-        setTimeout(injectTicTacToeMenu, 300);
+    if (!settings.masterEnabled || !settings.features[FEATURE_KEY]) {
+      return; // 택 기능 비활성화
+    }
+
+    // 페이지 로드 후 주입
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => {
+        setTimeout(injectTicTacToeLauncher, 500);
       });
+    } else {
+      injectTicTacToeLauncher();
+    }
 
-      // 정기적으로 메뉴 확인 (SPA 라우팅 대응)
-      setInterval(() => {
-        if (!document.getElementById(TICTACTOE_ID)) {
-          injectTicTacToeMenu();
-        }
-      }, 2000);
+    // SPA 라우팅 대응: 주기적으로 확인
+    setInterval(() => {
+      if (!document.getElementById(LAUNCHER_ID)) {
+        injectTicTacToeLauncher();
+      }
+    }, 2000);
+
+    // 설정 변경 감지
+    Storage.onSettingsChanged((newVal) => {
+      const enabled = newVal && newVal.masterEnabled && newVal.features[FEATURE_KEY];
+      const launcher = document.getElementById(LAUNCHER_ID);
+
+      if (enabled && !launcher) {
+        injectTicTacToeLauncher();
+      } else if (!enabled && launcher) {
+        launcher.remove();
+      }
     });
   }
 
-  // 초기화
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initialize);
-  } else {
-    initialize();
-  }
+  initialize();
 })(typeof window !== "undefined" ? window : globalThis);
