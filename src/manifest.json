@@ -3,7 +3,7 @@
   "name": "OGS Plus",
   "short_name": "OGS+",
   "version": "1.0.0",
-  "description": "OGS(Online-Go.com)를 더 편리하게! 다국어 설정, 실시간 음성 해설 자동 채팅 입력, 이미지 링크 미리보기, 커스텀 CSS, About 헤딩 단축키, 프로필 승률 통계, SGF 업로드, 봇 랭크전 신청, 통합 알림 등을 제공하는 올인원 확장 프로그램입니다.",
+  "description": "OGS(Online-Go.com)를 더 편리하게! 다국어 설정, 실시간 음성 해설 자동 채팅 입력, 이미지 링크 미리보기, 커스텀 CSS, About 헤딩 단축키, 프로필 승률 통계, SGF 업로드, 통합 알림.",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
