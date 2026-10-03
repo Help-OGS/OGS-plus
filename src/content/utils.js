@@ -1,6 +1,6 @@
 /**
- * OGS Plus - 공통 유틸리티
- * 모든 content script에서 공유하는 DOM 헬퍼, 설정 접근, 번역 헬퍼 등.
+* OGS Plus - Common Utilities 
+* DOM helpers, configuration access, translation helpers, etc., shared across all content scripts.
  */
 (function (global) {
   "use strict";
@@ -24,8 +24,8 @@
     return I18n.translate(key, lang);
   }
 
-  // 특정 셀렉터가 나타날 때까지(이미 있으면 즉시) 콜백 실행.
-  // SPA 라우팅 대응.
+// Execute a callback when a specific selector appears (or immediately if it already exists). 
+// Supports SPA routing.
   function onElementReady(selector, callback, root = document) {
     const existing = root.querySelector(selector);
 
@@ -50,7 +50,7 @@
     return () => observer.disconnect();
   }
 
-  // 지속적으로 셀렉터를 감시.
+  // Continuously monitor the selector.
   function watchElements(selector, callback, root = document) {
     const seen = new WeakSet();
 
@@ -124,7 +124,7 @@
     };
   }
 
-  // 현재 로그인 사용자 정보
+  // Current User Information
   function getCurrentUserId() {
     try {
       const raw = localStorage.getItem("ogs.data");
@@ -140,7 +140,7 @@
       /* ignore */
     }
 
-    // fallback: 프로필 아이콘 링크에서 추출
+    // fallback: Extracted from the profile icon link
     const profileLink = document.querySelector(
       'a[href^="/user/view/"]',
     );
@@ -169,7 +169,7 @@
   }
 
   /**
-   * 일반 OGS API 요청
+   * Standard OGS API Request
    */
   function apiFetch(path, opts = {}) {
     const url = path.startsWith("http")
@@ -222,10 +222,10 @@
   }
 
   /**
-   * Raw API 요청
-   *
-   * SGF처럼 JSON이 아닌 응답을 받을 때 사용.
-   * 특히 /games/{id}/sgf 에서 사용한다.
+ * Raw API Request 
+ * 
+ * Used when receiving a non-JSON response, such as SGF. 
+ * Specifically used for `/games/{id}/sgf`.
    */
   async function apiFetchRaw(path, opts = {}) {
     const url = path.startsWith("http")
@@ -245,8 +245,8 @@
     if (!csrfSafe) {
       headers["X-CSRFToken"] = getCookie("csrftoken");
 
-      // FormData인 경우 Content-Type을 직접 지정하지 않는다.
-      // 브라우저가 multipart boundary를 자동으로 설정해야 한다.
+  // Do not manually set the Content-Type for FormData. 
+  // The browser must automatically set the multipart boundary.
       if (
         opts.body &&
         !(opts.body instanceof FormData) &&
