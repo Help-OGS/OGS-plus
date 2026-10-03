@@ -1,6 +1,6 @@
 /**
- * OGS Plus - "Plus Settings" 탭을 OGS 설정 페이지(#SettingsGroupSelector)에 주입
- * 경로: /settings/plus  (기존 그룹 목록 맨 아래에 새 항목 추가)
+* OGS Plus - Injects the "Plus Settings" tab into the OGS settings page (#SettingsGroupSelector) 
+* Path: /settings/plus (adds a new item to the bottom of the existing group list)
  */
 (function (global) {
   "use strict";
@@ -55,7 +55,7 @@
     );
     page.appendChild(Utils.createEl("div", { class: "ogsplus-tagline", text: Utils.t("app.tagline") }));
 
-    // 마스터 스위치
+    // master switch
     const masterInput = Utils.createEl("input", {
       type: "checkbox",
       onChange: async (e) => {
@@ -76,7 +76,7 @@
       ]),
     );
 
-    // 언어 선택
+    // Language Selection
     const I18n = global.OGSPlusI18n;
     const langSelect = Utils.createEl(
       "select",
@@ -84,7 +84,7 @@
         onChange: async (e) => {
           await Storage.setSettings({ language: e.target.value });
           Toast.showToast("Saved", "success");
-          renderPage(); // 언어 즉시 재렌더
+          renderPage(); // Language Immediate Re-render
         },
       },
       I18n.LANGS.map((code) =>
@@ -101,7 +101,7 @@
 
     const sections = [];
 
-    // 1) 음성 해설
+    // 1) Audio Commentary
     const voiceLangSelect = Utils.createEl(
       "select",
       {
@@ -138,7 +138,7 @@
     voiceSection.dataset.feature = "voiceCommentary";
     sections.push(voiceSection);
 
-    // 2) 이미지 미리보기
+    // 2) Image Preview
     const imgSection = sectionBox(
       "settings.section.imagePreview",
       "settings.imagePreview.desc",
@@ -153,7 +153,7 @@
     imgSection.dataset.feature = "imagePreview";
     sections.push(imgSection);
 
-    // 3) 커스텀 CSS
+    // 3) Custom CSS
     const cssTextarea = Utils.createEl("textarea", {
       class: "ogsplus-textarea",
       placeholder: "/* your CSS here */",
@@ -206,7 +206,7 @@
     cssSection.dataset.feature = "customCss";
     sections.push(cssSection);
 
-    // 4) About 헤딩 단축키
+    // 4) About the Header Shortcut
     const headingSection = sectionBox(
       "settings.section.aboutHeading",
       "settings.aboutHeading.desc",
@@ -225,7 +225,7 @@
     headingSection.dataset.feature = "aboutHeadingShortcut";
     sections.push(headingSection);
 
-    // 5) Beta 링크
+    // 5) Beta link
     const betaSection = sectionBox(
       "settings.section.nav",
       "settings.nav.betaLink.desc",
@@ -240,7 +240,7 @@
     betaSection.dataset.feature = "betaNavLink";
     sections.push(betaSection);
 
-    // 6) 프로필 승률
+    // 6) Profile Win Rate
     const profileSection = sectionBox(
       "settings.section.profile",
       "settings.profile.desc",
@@ -255,7 +255,7 @@
     profileSection.dataset.feature = "profileWinRate";
     sections.push(profileSection);
 
-    // 7) SGF 업로드
+    // 7) SGF Upload
     const sgfSection = sectionBox("settings.section.sgf", "settings.sgf.desc", settings.features.sgfOgsUpload, [
       switchable("settings.sgf.enable", settings.features.sgfOgsUpload, async (v) => {
         await Storage.setFeature("sgfOgsUpload", v);
@@ -265,7 +265,7 @@
     sgfSection.dataset.feature = "sgfOgsUpload";
     sections.push(sgfSection);
 
-    // 8) 봇 랭크전
+    // 8) bot rank
     const botSection = sectionBox("settings.section.bot", "settings.bot.desc", settings.features.botRankRequest, [
       switchable("settings.bot.enable", settings.features.botRankRequest, async (v) => {
         await Storage.setFeature("botRankRequest", v);
@@ -275,7 +275,7 @@
     botSection.dataset.feature = "botRankRequest";
     sections.push(botSection);
 
-    // 9) 알림 + 조용모드
+    // 9) Notifications + Silent Mode
     const quietSwitch = switchable(
       "settings.notifications.quietMode",
       settings.quietMode.enabled,
