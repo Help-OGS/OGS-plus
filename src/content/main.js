@@ -13,7 +13,7 @@
   });
 
   Storage.onSettingsChanged((newVal) => {
-    // utils.js의 cachedSettings를 직접 갱신
+    // Update cachedSettings in utils.js directly
     Utils.loadSettings();
     if (newVal && !newVal.masterEnabled) {
       const preview = document.getElementById("ogsplus-css-preview-style");
