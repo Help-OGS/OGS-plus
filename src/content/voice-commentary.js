@@ -1,10 +1,11 @@
 /**
- * OGS Plus - 해설자용 음성 → 채팅 자동 입력 기능
- *
- * 사용법: 시연 바둑판(/demo/ 또는 /review/ 경로)에서 수를 둔 뒤
- * Ctrl + Alt 를 누르고 있는 동안 마이크로 말하면, 설정에서 고른 언어로
- * 음성 인식된 텍스트가 채팅 입력창에 채워진다. 실제 전송(기록)은
- * 사용자가 직접 Enter를 눌러야만 이루어진다 (자동 전송하지 않음).
+* OGS Plus - Voice-to-Chat Input for Commentators 
+* 
+* Usage: After making a move on the demo board (at the /demo/ or /review/ path), 
+* hold down Ctrl + Alt and speak into the microphone; the recognized speech 
+* will appear in the chat input box in the language selected in the settings. 
+* The actual message submission (recording) occurs only when the user 
+* manually presses Enter (it is not sent automatically).
  */
 (function (global) {
   "use strict";
@@ -26,7 +27,7 @@
   }
 
   function getActiveChatInput() {
-    // 포커스된 textarea가 채팅 인풋이면 그것을 우선 사용, 아니면 화면에서 첫번째 chat-input을 사용
+    // If the focused textarea is a chat input, use it; otherwise, use the first chat-input on the screen.
     const active = document.activeElement;
     if (active && active.matches && active.matches(CHAT_INPUT_SELECTOR)) {
       return active;
@@ -118,7 +119,7 @@
 
     recognition.onend = () => {
       if (isListening) {
-        // 브라우저가 자동으로 세션을 끊는 경우 재시작 시도 (키를 계속 누르고 있는 동안)
+        // Attempt to restart if the browser automatically terminates the session (while holding down the key).
         try {
           recognition.start();
         } catch (e) {
