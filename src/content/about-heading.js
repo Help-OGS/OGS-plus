@@ -1,6 +1,6 @@
 /**
-OGS Plus - About Headings Shortcut Keys
- In the *About edit (textarea.about-editor), press Alt+H and then press numbers 1 through 5
+ * OGS Plus - About Headings Shortcut Keys
+ * In the *About edit (textarea.about-editor), press Alt+H and then press numbers 1 through 5
  * Automatically inserts Markdown headings (# ~ #####) at the cursor position..
  */
 (function (global) {
