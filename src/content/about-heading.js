@@ -1,7 +1,7 @@
 /**
- * OGS Plus - About 헤딩 단축키
- * About 편집(textarea.about-editor)에서 Alt+H 를 누른 뒤 1~5 숫자를 누르면
- * 커서 위치에 Markdown 헤딩(# ~ #####)을 자동으로 삽입한다.
+ * OGS Plus - About Headings Shortcut Keys
+ * In the *About edit (textarea.about-editor), press Alt+H and then press numbers 1 through 5
+ * Automatically inserts Markdown headings (# ~ #####) at the cursor position..
  */
 (function (global) {
   "use strict";
