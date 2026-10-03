@@ -1,8 +1,8 @@
 /**
- * OGS Plus - 9개 국어 번역 데이터
- * 기본 언어: English(en) + 8개국어(ko, ja, zh, es, fr, de, ru, pt)
- * 확장 프로그램이 주입하는 모든 UI 텍스트(Plus Settings 탭, 팝업, 알림 등)에 사용된다.
- * OGS 사이트 자체의 언어와는 독립적으로 동작한다.
+ * OGS Plus - 9-Language Translation Data
+ * Base language: English (en) + 8 languages (ko, ja, zh, es, fr, de, ru, pt)
+ * It is used for all UI text injected by the extension (such as the Plus Settings tab, pop-ups, and notifications).
+ * It operates independently of the language of the OGS site itself.
  */
 (function (global) {
   "use strict";
@@ -21,7 +21,7 @@
     pt: "Português",
   };
 
-  // 키: 공통 dot-notation, 값: 각 언어별 문자열
+  // Key: common dot-notation; Value: string for each language
   const DICT = {
     "app.name": {
       en: "OGS Plus",
