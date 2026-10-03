@@ -1,8 +1,8 @@
 /**
- * OGS Plus - 초경량 브라우저 API 헬퍼
- * Chrome extension 환경에서 chrome.* 네임스페이스를 그대로 사용하되,
- * Promise 기반 storage 래퍼를 제공해 코드 전반에서 async/await로 쓸 수 있게 한다.
- * (별도 webextension-polyfill 라이브러리를 빌드/번들링하지 않고, 수동 install 방식에 맞춰 자체 구현)
+ * OGS Plus - Ultra-Lightweight Browser API Helper
+ * In the Chrome extension environment, use the chrome.* namespace as is, but,
+ * Provides a Promise-based storage wrapper so that async/await can be used throughout the code.
+ * (Implemented independently following a manual install approach, without building or bundling a separate webextension-polyfill library)
  */
 (function (global) {
   "use strict";
