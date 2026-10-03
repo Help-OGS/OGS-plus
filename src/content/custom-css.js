@@ -1,8 +1,8 @@
 /**
- * OGS Plus - 커스텀 스타일시트 기능
- * 1) "베타 미리보기": 현재 페이지에 즉시 <style> 태그로 적용해서 실시간으로 확인
- * 2) "수락(Approve)": 실제로 자신의 프로필 About 텍스트에 <style> 블록을 자동 삽입/치환
- *    (마커 주석으로 감싸서 재적용 시 중복되지 않고 갱신됨)
+ * OGS Plus - Custom stylesheet feature
+ * 1) "Beta Preview": Apply to current page immediately as <style> tag for real-time preview
+ * 2) "Approve": Automatically insert/replace <style> block in user's profile About text
+ *    (Wrapped with marker comments so re-applying updates without duplicates)
  */
 (function (global) {
   "use strict";
@@ -42,7 +42,7 @@
       const after = existingAbout.slice(endIdx + MARK_END.length);
       return `${before}${block}${after}`;
     }
-    // 없으면 맨 뒤에 추가 (about이 비어있지 않으면 줄바꿈 두 번으로 구분)
+    // If not found, append to end (separate by double newline if about not empty)
     const sep = existingAbout && existingAbout.trim() ? "\n\n" : "";
     return `${existingAbout || ""}${sep}${block}`;
   }
@@ -52,7 +52,7 @@
     if (!userId) {
       throw new Error("Could not determine current user id");
     }
-    // 현재 about 내용을 가져온다
+    // Get current about content
     const me = await Utils.apiFetch(`players/${userId}`);
     const existingAbout = me.about || "";
     const newAbout = mergeIntoAbout(existingAbout, css);
@@ -90,9 +90,9 @@
     MARK_END,
   };
 
-  // 설정에서 이미 승인된 CSS가 있다면, 방문 시 프리뷰 스타일로 상시 적용
-  // (이건 "현재 브라우저에서 즉시 보이게" 하기 위한 보조 기능이며,
-  //  실제 다른 사용자에게 보이는 건 About에 저장된 <style> 블록임)
+  // If approved CSS already exists in settings, apply as preview style on page visit
+  // (This is an auxiliary feature to show immediately in current browser;
+  //  actual display to other users comes from About's stored <style> block)
   Utils.loadSettings().then((settings) => {
     if (
       settings.masterEnabled &&
