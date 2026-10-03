@@ -4,13 +4,12 @@
   const STORAGE_KEY = "ogsplus_settings_v1";
 
   const DEFAULT_SETTINGS = {
-    // 전체 on/off 마스터 스위치
+    // Overall on/off master switch
     masterEnabled: true,
 
-    // 언어
+    // Language
     language: "en",
 
-    // 기능별 on/off
     features: {
       voiceCommentary: false,
       imagePreview: true,
@@ -23,7 +22,7 @@
       notifications: true,
     },
 
-    // 음성 해설 설정
+    // Voice-over Settings
     voice: {
       lang: "ko-KR",
       hotkey: "ctrl+alt",
@@ -31,11 +30,11 @@
       interimDisplay: true,
     },
 
-    // 커스텀 CSS
+    // Custom CSS
     customCssCode: "",
     customCssApproved: false,
 
-    // 알림 조용 모드
+    // Notification Silent Mode
     quietMode: {
       enabled: false,
       muteDm: true,
@@ -43,7 +42,7 @@
       muteAnnouncement: false,
     },
 
-    // 알림 기록
+    // Notification History
     lastSeen: {
       announcement: 0,
       forum: 0,

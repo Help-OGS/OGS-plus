@@ -1,8 +1,8 @@
 /**
- * OGS Plus - 봇 랭크전 신청 헬퍼
- * 사용자 프로필이 봇(is_bot)인 경우, "이 봇은 랭크전을 자동 수락하지 않을 수 있다"는
- * 안내와 함께, 화면에 있는 기존 'Challenge' 버튼을 자동으로 찾아 클릭해주는
- * 바로가기 버튼을 프로필 카드 근처에 추가한다.
+ * OGS Plus - Bot Ranked Match Application Helper
+ * If the user profile is bot (is_bot), a message stating "This bot may not automatically accept ranked matches" is displayed
+ * Along with the prompt, it automatically finds and clicks the existing 'Challenge' button on the screen
+ Add a * shortcut button near the profile card.
  */
 (function (global) {
   "use strict";
