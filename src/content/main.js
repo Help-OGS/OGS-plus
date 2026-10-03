@@ -1,7 +1,7 @@
 /**
- * OGS Plus - content script 진입점(오케스트레이터)
- * 설정을 로드해 캐시하고, storage 변경을 감지해 캐시를 갱신한다.
- * 각 기능 스크립트는 Utils.getCachedSettings()를 통해 항상 최신 상태를 읽는다.
+* OGS Plus - content script entry point (orchestrator)
+ * Load settings to cache, and detect changes to storage to refresh the cache.
+ * Each feature script always reads the latest state via Utils.getCachedSettings().
  */
 (function (global) {
   "use strict";
