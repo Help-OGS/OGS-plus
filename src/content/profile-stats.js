@@ -1,14 +1,14 @@
 /**
- * OGS Plus - 프로필 페이지 승률 위젯
- * `/user/view/:id` 페이지에서 `players/{id}/game_history/` API를 페이지네이션 순회하며
- * (annulled 제외) 전체 승/패를 집계해 도넛형 승률 카드를 About 카드 위에 삽입한다.
+ * OGS Plus - Profile Page Win Rate Widget
+ * On the `/user/view/:id` page, iterate through the `players/{id}/game_history/` API in pagination order
+ * (Except for annulled cases) Aggregate all wins/losses and insert a donut-shaped win rate card above the About card.
  */
 (function (global) {
   "use strict";
 
   const Utils = global.OGSPlusUtils;
   const WIDGET_CLASS = "ogsplus-winrate-card";
-  const MAX_PAGES = 40; // 안전장치: 과도한 대국수(수만개) 유저 보호, 최대 40페이지(=약 2000국)까지만 집계
+  const MAX_PAGES = 40; // Safety features: Protects tens of thousands of users, aggregating data only up to 40 pages (= about 2,000 countries)
 
   function getUserIdFromUrl() {
     const m = window.location.pathname.match(/\/user\/view\/(\d+)/);
