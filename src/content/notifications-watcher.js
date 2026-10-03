@@ -1,8 +1,8 @@
 /**
- * OGS Plus - 통합 알림 (공지사항 / 포럼 답글 / DM) + 조용 모드
- * OGS 페이지의 알림 인디케이터(.NotificationIndicator)와 채팅 시스템을 주기적으로
- * 관찰하여 새 항목이 생기면 background service worker에 chrome.notifications 표시를
- * 요청한다. 조용 모드가 켜져 있으면 DM 알림만 무시한다.
+* OGS Plus - Unified notifications (announcements / forum replies / DMs) + silent mode
+ * Periodically update the notification indicator (.NotificationIndicator) and chat system on the OGS page
+ * Observe and add chrome.notifications to the background service worker when a new item appears
+ * Request. If Quiet Mode is on, it only ignores DM notifications.
  */
 (function (global) {
   "use strict";
@@ -34,7 +34,7 @@
   let lastDmUnread = null;
 
   function pollAnnouncements() {
-    // 공지사항: .Announcements 컴포넌트/알림 리스트에 새 항목이 뜨는지 뱃지로 감지
+    // Notice: .Detects whether a new item appears in the Announcements component/notification list using a badge
     const badge = document.querySelector(".NotificationIndicator .badge, .NotificationIndicator .count");
     if (badge) {
       const n = parseInt(badge.textContent || "0", 10) || 0;
