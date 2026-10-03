@@ -1,6 +1,6 @@
 /**
- * OGS Plus - 화면 토스트 알림 헬퍼
- * 저장 완료, 베타 미리보기 적용 등 짧은 피드백을 위한 작은 토스트 UI.
+* OGS Plus - Screen Toast Notification Helper
+ * A small toast UI for quick feedback, such as save completion and beta preview application.
  */
 (function (global) {
   "use strict";
