@@ -69,7 +69,7 @@
     },
     "settings.language": {
       en: "Extension Language",
-      ko: "확장 프로그램 언어",
+      ko: "확장 언어",
       ja: "拡張機能の言語",
       zh: "扩展语言",
       es: "Idioma de la extensión",
