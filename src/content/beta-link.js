@@ -1,5 +1,5 @@
 /**
- * OGS Plus - Added a 'Beta' shortcut link to the top navigation bar
+ * OGS Plus - Added a Beta shortcut link to the top navigation bar
  * Click to go to the same path on beta.online-go.com .
  */
 (function (global) {
