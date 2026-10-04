@@ -2,7 +2,7 @@
    OGS Plus - content script all style
    ========================================================================== */
 
-/* ---- 토스트 알림 ---- */
+/* ---- Toast Notification ---- */
 #ogsplus-toast-container {
   position: fixed;
   top: 70px;
@@ -33,13 +33,13 @@
 .ogsplus-toast-error { background: #b91c1c; }
 .ogsplus-toast-info { background: #1f2937; }
 
-/* ---- Settings 탭: Plus Settings 그룹 아이콘 강조 ---- */
+/* ---- Settings tab: Highlight the Plus Settings group icon ---- */
 .SettingsGroup.ogsplus-group i.ogsplus-icon {
   margin-right: 6px;
   color: #2f80ed;
 }
 
-/* ---- Plus Settings 컨텐츠 페이지 ---- */
+/* ---- Plus Settings Content Page ---- */
 .ogsplus-settings-page {
   padding: 4px 2px 40px 2px;
   max-width: 780px;
@@ -130,7 +130,7 @@
   border-radius: 6px;
 }
 
-/* 토글 스위치 */
+/* Toggle switch */
 .ogsplus-switch {
   position: relative;
   display: inline-block;
@@ -218,7 +218,7 @@
   border-top: 1px dashed var(--shade2, rgba(120,120,120,0.2));
 }
 
-/* ---- Beta 상단바 링크 ---- */
+/* ---- Beta Top Bar Links ---- */
 .ogsplus-beta-link {
   display: inline-flex;
   align-items: center;
@@ -240,7 +240,7 @@
   color: #1f2937 !important;
 }
 
-/* ---- 음성 해설 인디케이터 ---- */
+/* ---- Audio description indicator ---- */
 .ogsplus-voice-indicator {
   position: fixed;
   bottom: 24px;
@@ -272,7 +272,7 @@
   100% { transform: scale(1); opacity: 1; }
 }
 
-/* ---- 채팅 이미지 미리보기 ---- */
+/* ---- Chat image preview ---- */
 .ogsplus-img-preview-wrap {
   display: block;
   margin-top: 4px;
@@ -346,7 +346,7 @@
 .ogsplus-winrate-stats .win { color: #15803d; }
 .ogsplus-winrate-stats .loss { color: #b91c1c; }
 
-/* ---- SGF 업로드 버튼/모달 ---- */
+/* ---- SGF Upload Button/Modal ---- */
 .ogsplus-sgf-btn {
   display: inline-flex;
   align-items: center;
@@ -435,7 +435,7 @@
   margin-top: 14px;
 }
 
-/* ---- 봇 랭크전 신청 헬퍼 ---- */
+/* ---- Bot Ranked Match Application Helper ---- */
 .ogsplus-bot-helper {
   margin-top: 10px;
   padding: 10px 12px;
