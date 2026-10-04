@@ -1,6 +1,6 @@
 # OGS Plus
 
-This is a Chrome extension that makes using OGS (Online-Go.com) more convenient. It is not listed on the Chrome Web Store; instead, it is installed manually via the **"Load unpacked"** option in `chrome://extensions` (Developer mode).
+This is a Chrome extension program that makes using OGS (Online-Go.com) more convenient. It is not listed on the Chrome Web Store; instead, it is installed manually via the **"Load unpacked"** option in `chrome://extensions` (Developer mode).
 
 ## Installation Instructions
 1. click Code
