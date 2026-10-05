@@ -25,7 +25,7 @@
   const DICT = {
     "app.name": {
       en: "OGS Plus",
-      ko: "OGS 플러스",
+      ko: "OGS Plus",
       ja: "OGS プラス",
       zh: "OGS 增强版",
       es: "OGS Plus",
