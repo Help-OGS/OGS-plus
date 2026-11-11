@@ -1,73 +1,78 @@
 # OGS Plus
 
-This is a Chrome extension program that makes using OGS (Online-Go.com) more convenient. It is not listed on the Chrome Web Store; instead, it is installed manually via the **"Load unpacked"** option in `chrome://extensions` (Developer mode).
+This is a Chrome extension that makes OGS (Online-Go.com) more convenient to use. It is not listed on the Chrome Web Store; install it manually using the **Load unpacked** option on `chrome://extensions` while Developer mode is enabled.
 
-## Installation Instructions
-1. click Code
-2.Download zip
-3. Go to `chrome://extensions`
-4. Turn on "Developer mode" in the top right corner
-5. Click "Load unpacked"
-6. Select the `src/` folder from this repository
+## Installation
+
+1. Click **Code** and download the ZIP archive.
+2. Open `chrome://extensions` in Chrome.
+3. Enable **Developer mode** in the top-right corner.
+4. Click **Load unpacked**.
+5. Select the `src/` folder from this repository.
 
 ## How to Use
 
-After installation, go to **online-go.com → click your profile in the top-right corner → Settings**; you will see a new **"Plus Settings"** tab at the bottom of the existing settings list (General, Sound, Game, etc.). You can enable or disable all features within this tab (`/settings/plus`).
+After installation, open **online-go.com → your profile (top right) → Settings**. The **Plus Settings** tab appears at the bottom of the settings list. Use it to configure the extension's features (available at `/settings/plus`).
 
 ## Key Features
 
-| Function | Description |
+| Feature | Description |
 |---|---|
-🌐 Multilingual | Switch the extension UI to 9 languages (Korean/Japanese/Chinese/Spanish/French/German/Russian/Portuguese) including English |
-🎙️ Voice Input Explanation | After placing a move on the demo board, hold **Ctrl+Alt** to have it be recognized by your chosen language and filled into the chat input. Actual transmission is recorded only when **Enter** is pressed |
-🖼️ Image Link Preview | Displays a secure inline preview to prevent users from clicking on image links in game chats or DMs (risk of spam or hacking) |
-→ Custom stylesheets | Write CSS without manually adding `<link>` tags to About → Beta preview 🎨 Accepting automatically inserts a `<style>` block in About |
-🔠 About heading shortcuts | While editing, press **Alt+H → 1–5 to automatically insert the Markdown heading (H1–H5) for the current level at the cursor position |
-⚡ Beta Link | Added a 'Beta' button to the top navigation bar, which takes you to the beta.online-go.com version of the current page |
-📊 Profile Win Rate Widget | Aggregate all match records on the user profile page and display them as a win rate card |
-|→ SGF match upload | Added 'OGS Game' button to the SGF library page 🎮 Upload SGF directly by selecting your own match or someone else's match |
-🤖 Bot Ranking Tournament Application Helper | Since many AI bots do not accept tournaments automatically, guidance and a direct link are provided to manually apply in the bot profile |
-🔔 Unified notifications + desktop alerts for announcements, forum replies, and DMs. When there are too many DMs, block only DM notifications in Silent Mode |
-🎛️ Toggle all functions individually; you can also turn the entire display off at once using the master switch |
+| 🌐 Multilingual UI | Switch the extension UI between nine languages: English, Korean, Japanese, Chinese, Spanish, French, German, Russian, and Portuguese. |
+| 🎙️ Voice input | On the demo board, hold **Ctrl+Alt** to dictate a comment in your selected language into the chat input. The comment is sent only when you press **Enter**. |
+| 🖼️ Image link preview | Show secure inline previews for image links in game chats and direct messages. |
+| 🎨 Custom stylesheets | Preview custom CSS and optionally add it to your About profile. |
+| 🔠 About heading shortcuts | Press **Alt+H**, then **1–5**, while editing to insert a Markdown heading. |
+| ⚡ Beta link | Open the beta version of the current page from a button in the top navigation bar. |
+| 📊 Profile win-rate widget | Display a win-rate summary based on the match records on a user's profile. |
+| 🎮 SGF match upload | Upload an SGF from the SGF library by selecting your own match or another player's match. |
+| 🤖 Bot tournament helper | Find guidance and a direct link for manually applying to bot tournaments. |
+| 🔔 Notifications | Receive notifications and desktop alerts for announcements, forum replies, and direct messages. Silent Mode can suppress direct-message notifications. |
+| 🎛️ Feature controls | Toggle features individually or switch off the entire extension display. |
+
 ## Project Structure
 
-```
-```
+```text
 src/
-├── manifest.json              # Manifest V3 정의
-├── background/background.js   # 알림 처리용 service worker
-├-- content/ # Content scripts injected into the OGS page
-│ ├-- utils.js Common DOM/Settings/Translation Helper
-│ ├-- notice.js Toast Notification UI
-│   ├── settings-tab.Inject the JS "Plus Settings" tab (core UI)
-│ ├-- voice-commentary.js Ctrl+Alt voice commentary → Enter chat
-│ ├-- image-preview.js Chat/DM Image Link Preview
-│ ├-- custom-css.js Custom CSS Beta Preview & About Auto-Post
-│ ├-- about-heading.js Alt+H+1~5 Heading Shortcuts
-│ ├-- beta-link.js Top Bar Beta Links
-│ ├-- profile-stats.js Profile Win Rate Widget
-│ ├-- sgf-upload.js SGF 'OGS Game' Upload Modal
-│ ├-- bot-rank-request.js Bot Ranking Request Helper
-│ ├-- notifications-watcher.js Notices/Forum/DM Detection → Notifications
-│ └-- main.js Orchestrator (Load Settings / Subscribe)
+├── manifest.json                 # Chrome extension manifest (Manifest V3)
+├── background/
+│   └── background.js             # Service worker for extension notifications
+├── content/
+│   ├── main.js                   # Initializes content scripts and settings
+│   ├── utils.js                  # Shared DOM, settings, and translation helpers
+│   ├── notice.js                 # Toast notification UI
+│   ├── settings-tab.js           # Adds the Plus Settings tab to OGS
+│   ├── voice-commentary.js       # Voice input for demo-board chat
+│   ├── image-preview.js          # Image previews for chat and direct messages
+│   ├── custom-css.js             # Custom CSS preview and About profile integration
+│   ├── about-heading.js          # Markdown heading shortcuts in About editor
+│   ├── beta-link.js              # Link to the OGS beta site
+│   ├── profile-stats.js          # Profile win-rate widget
+│   ├── sgf-upload.js             # SGF match upload dialog
+│   ├── bot-rank-request.js       # Bot tournament application helper
+│   ├── notifications-watcher.js  # Detects notices, forum replies, and DMs
+│   ├── gomoku-demo.js            # Gomoku demo-board feature
+│   ├── tictactoe-launcher.js     # Tic-tac-toe launcher
+│   └── content.css               # Styles for injected content and UI
+├── i18n/
+│   └── translations.js           # Nine-language translation dictionary
 ├── lib/
-│   ├── browser-polyfill.js    chrome.storage Promise 래퍼
-│ └-- storage.js configuration schema + default values + save
-├-- i18n/translations.js 9-Language Translation Dictionary
-├-- popup / Toolbar Popup (Direct link to Plus Settings)
-├-- options/ Extension Options Page (For Guidance)
-└ -- icons/ Extension Icons
+│   ├── browser-polyfill.js       # Promise-based wrapper for Chrome storage APIs
+│   └── storage.js                # Settings schema, defaults, and persistence
+├── options/
+│   └── options.html              # Extension guidance/options page
+├── popup/
+│   ├── popup.html                # Toolbar popup markup
+│   └── popup.js                  # Opens Plus Settings from the popup
+└── icons/                        # Extension icons
 ```
 
 ## Implementation Basis
 
-This extension uses OGS's open-source frontend ([online-go/https://github.com/online-go/online-go.com))Ġ](online-go.com
-By examining the source code, I configured selectors and API calls based on the existing DOM class names and API endpoints.
-(예: `.Settings`/`#SettingsGroupSelector`, `.chat-line`/`.ChatLine`, `textarea.about-editor`,
-`players/{id}/game_history/`, `games/{id}/sgf`, `me/games/sgf/{collection_id}`, `beta.online-go.com` 등)
+This extension builds on OGS's open-source frontend: [online-go/online-go.com](https://github.com/online-go/online-go.com). Its selectors and API calls are based on the existing DOM class names and API endpoints, including `.Settings`, `#SettingsGroupSelector`, `.chat-line`, `.ChatLine`, `textarea.about-editor`, `players/{id}/game_history/`, `games/{id}/sgf`, `me/games/sgf/{collection_id}`, and `beta.online-go.com`.
 
 ## Precautions
 
-- Use MutationObserver and the `history.pushState` hook to handle SPA (Single Page Application) routing.
-- The "Accept" custom CSS feature actually calls the API (`PUT players/{id}`) to modify the user's About profile text. To turn it back on, toggle it off again in Plus Settings or edit the About section manually.
-- Voice recognition uses the browser's built-in Web Speech API and does not send voice data to a separate server (according to the browser's STT implementation).
+- The extension uses `MutationObserver` and a `history.pushState` hook to handle single-page application (SPA) navigation.
+- The custom CSS **Accept** feature calls `PUT players/{id}` to update the About profile text. To remove the inserted text, disable the feature in Plus Settings or edit the About section manually.
+- Voice recognition uses the browser's built-in Web Speech API. Voice data is not sent to a separate server by this extension; handling depends on the browser's speech-to-text implementation.
