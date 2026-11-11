@@ -18,7 +18,6 @@ def translate(text: str) -> str:
     if not text.strip():
         return ""
 
-    # 너무 긴 입력은 문단 단위로 나눠 처리
     paragraphs = text.split("\n")
     result = []
 
@@ -27,7 +26,6 @@ def translate(text: str) -> str:
             result.append("")
             continue
 
-        # Markdown 코드 블록은 번역하지 않음
         if paragraph.strip().startswith("```"):
             result.append(paragraph)
             continue
