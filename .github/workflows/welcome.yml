@@ -22,5 +22,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: '👋 Hello! Thanks for submitting a PR. I’ll take a look and provide a review.'
+              body: 'Chaerobot:👋 Hello! Thanks for submitting a PR. I’ll take a look and provide a review.'
             });
