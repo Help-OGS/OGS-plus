@@ -22,5 +22,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: '👋 안녕하세요! PR을 보내주셔서 감사합니다. 확인 후 리뷰하겠습니다.'
+              body: '👋 Hello! Thanks for submitting a PR. I’ll take a look and provide a review.'
             });
