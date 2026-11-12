@@ -4,7 +4,7 @@ This is a Chrome extension that makes OGS (Online-Go.com) more convenient to use
 
 ## Installation
 
-1. Click **Code** and download the ZIP archive.
+1. Click **Realease** and download the ZIP archive.
 2. Open `chrome://extensions` in Chrome.
 3. Enable **Developer mode** in the top-right corner.
 4. Click **Load unpacked**.
