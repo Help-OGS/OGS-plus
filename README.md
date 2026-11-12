@@ -30,42 +30,6 @@ After installation, open **online-go.com → your profile (top right) → Settin
 | 🔔 Notifications | Receive notifications and desktop alerts for announcements, forum replies, and direct messages. Silent Mode can suppress direct-message notifications. |
 | 🎛️ Feature controls | Toggle features individually or switch off the entire extension display. |
 
-## Project Structure
-
-```text
-src/
-├── manifest.json                 # Chrome extension manifest (Manifest V3)
-├── background/
-│   └── background.js             # Service worker for extension notifications
-├── content/
-│   ├── main.js                   # Initializes content scripts and settings
-│   ├── utils.js                  # Shared DOM, settings, and translation helpers
-│   ├── notice.js                 # Toast notification UI
-│   ├── settings-tab.js           # Adds the Plus Settings tab to OGS
-│   ├── voice-commentary.js       # Voice input for demo-board chat
-│   ├── image-preview.js          # Image previews for chat and direct messages
-│   ├── custom-css.js             # Custom CSS preview and About profile integration
-│   ├── about-heading.js          # Markdown heading shortcuts in About editor
-│   ├── beta-link.js              # Link to the OGS beta site
-│   ├── profile-stats.js          # Profile win-rate widget
-│   ├── sgf-upload.js             # SGF match upload dialog
-│   ├── bot-rank-request.js       # Bot tournament application helper
-│   ├── notifications-watcher.js  # Detects notices, forum replies, and DMs
-│   ├── gomoku-demo.js            # Gomoku demo-board feature
-│   ├── tictactoe-launcher.js     # Tic-tac-toe launcher
-│   └── content.css               # Styles for injected content and UI
-├── i18n/
-│   └── translations.js           # Nine-language translation dictionary
-├── lib/
-│   ├── browser-polyfill.js       # Promise-based wrapper for Chrome storage APIs
-│   └── storage.js                # Settings schema, defaults, and persistence
-├── options/
-│   └── options.html              # Extension guidance/options page
-├── popup/
-│   ├── popup.html                # Toolbar popup markup
-│   └── popup.js                  # Opens Plus Settings from the popup
-└── icons/                        # Extension icons
-```
 
 ## Implementation Basis
 
