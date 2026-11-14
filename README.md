@@ -42,8 +42,8 @@ This extension builds on OGS's open-source frontend: [online-go/online-go.com](h
 - Voice recognition uses the browser's built-in Web Speech API. Voice data is not sent to a separate server by this extension; handling depends on the browser's speech-to-text implementation. 
 
 ## teams
-admin: @Chaerogo
-Developer:
-Contributor:
-Translator:
-Translation Contributor:
+- admin: @Chaero0707
+- Developer:
+- Contributor: @benjaminpjones @dependabot[bot]
+- Translator:
+- Translation Contributor:
