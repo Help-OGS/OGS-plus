@@ -40,3 +40,10 @@ This extension builds on OGS's open-source frontend: [online-go/online-go.com](h
 - The extension uses `MutationObserver` and a `history.pushState` hook to handle single-page application (SPA) navigation.
 - The custom CSS **Accept** feature calls `PUT players/{id}` to update the About profile text. To remove the inserted text, disable the feature in Plus Settings or edit the About section manually.
 - Voice recognition uses the browser's built-in Web Speech API. Voice data is not sent to a separate server by this extension; handling depends on the browser's speech-to-text implementation. 
+
+## teams
+admin: @Chaerogo
+Developer:
+Contributor:
+Translator:
+Translation Contributor:
