@@ -317,32 +317,71 @@
     return page;
   }
 
+   function ensureHostStyles() {
+    if (document.getElementById("ogsplus-settings-host-style")) return;
+
+    const style = Utils.createEl("style", {
+      id: "ogsplus-settings-host-style",
+      text: "#SelectedSettingsContainer.ogsplus-showing-settings > :not(#ogsplus-settings-page) { display: none !important; }",
+    });
+
+    document.head.appendChild(style);
+  }
+
+  function cleanupPlusPage() {
+    const page = document.getElementById(PAGE_ID);
+    if (page) page.remove();
+
+    const container = document.getElementById("SelectedSettingsContainer");
+    if (container) {
+      container.classList.remove("ogsplus-showing-settings");
+    }
+  }
+
   async function renderPage() {
-    const existing = document.getElementById(PAGE_ID);
+    if (!isPlusSettingsActive()) {
+      cleanupPlusPage();
+      return;
+    }
+
     const container = document.getElementById("SelectedSettingsContainer");
     if (!container) return;
+
+    ensureHostStyles();
+
     const page = await buildPage();
+
+    if (!isPlusSettingsActive()) {
+      cleanupPlusPage();
+      return;
+    }
+
+    container.classList.add("ogsplus-showing-settings");
+
+    const existing = document.getElementById(PAGE_ID);
     if (existing) {
       existing.replaceWith(page);
     } else {
-      container.innerHTML = "";
       container.appendChild(page);
     }
   }
 
-  function isPlusSettingsRoute() {
+  function isPlusSettingsPath() {
     return window.location.pathname === "/settings/plus";
   }
 
-  function injectGroupTab() {
-    const selector = document.getElementById("SettingsGroupSelector");
+  function isPlusSettingsActive() {
+    const group = document.getElementById(GROUP_ID);
+
+    return isPlusSettingsPath() && !!group && group.classList.contains("selected");
+  }
     if (!selector || document.getElementById(GROUP_ID)) return;
 
     const group = Utils.createEl(
       "div",
       {
         id: GROUP_ID,
-        class: "SettingsGroup ogsplus-group" + (isPlusSettingsRoute() ? " selected" : ""),
+        class: "SettingsGroup ogsplus-group" + (isPlusSettingspath() ? " selected" : ""),
         onClick: () => {
           history.pushState({}, "", "/settings/plus");
           window.dispatchEvent(new PopStateEvent("popstate"));
@@ -359,7 +398,7 @@
     );
     selector.appendChild(group);
 
-    if (isPlusSettingsRoute()) {
+    if (isPlusSettingspath()) {
       setTimeout(renderPage, 50);
     }
   }
@@ -367,7 +406,7 @@
   function tick() {
     if (window.location.pathname.startsWith("/settings")) {
       injectGroupTab();
-      if (isPlusSettingsRoute() && !document.getElementById(PAGE_ID)) {
+      if (isPlusSettingspath() && !document.getElementById(PAGE_ID)) {
         renderPage();
       }
     }
