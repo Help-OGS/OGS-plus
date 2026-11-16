@@ -8,7 +8,7 @@ This is a Chrome extension that makes OGS (Online-Go.com) more convenient to use
 2. Open `chrome://extensions` in Chrome.
 3. Enable **Developer mode** in the top-right corner.
 4. Click **Load unpacked**.
-5. Select the `src/` folder from this repository.
+5. Select the `src` folder from this repository.
 
 ## How to Use
 
