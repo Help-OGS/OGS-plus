@@ -61,19 +61,19 @@ if __name__ == "__main__":
     translated_title = translate(title)
     translated_body = translate(body)
 
-    output = f"""## 🤖 3PO — 한국어 번역
+    output = f"""## 🤖 3PO — korean translate
 
-### 제목
+### name
 
 {translated_title}
 
-### 본문
+### text
 
 {translated_body}
 
 ---
 
-*이 번역은 오픈소스 번역 모델을 사용해 자동으로 생성되었습니다.*
+*This translation was generated automatically using an open-source translation model.*
 """
 
     with open("translation.md", "w", encoding="utf-8") as f:
