@@ -8,7 +8,7 @@ jobs:
   pr_bot:
     runs-on: ubuntu-latest
     steps:
-      # 1. PR이 처음 열렸을 때 (opened)
+      # 1. Pr opend
       - name: Welcome Message
         if: github.event.action == 'opened'
         uses: actions/github-script@v6
@@ -21,7 +21,7 @@ jobs:
               body: '👋 PR을 여신 것을 환영합니다!'
             })
 
-      # 2. PR이 병합되었거나 닫혔을 때 (closed)
+      # 2. PR is merge or deleted
       - name: Goodbye Message
         if: github.event.action == 'closed'
         uses: actions/github-script@v6
